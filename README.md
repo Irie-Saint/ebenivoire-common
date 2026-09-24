@@ -21,8 +21,11 @@ dependencies:
   ebenivoire_common:
     git:
       url: https://github.com/Irie-Saint/ebenivoire-common.git
-      ref: v0.1.0
+      ref: <numéro de commit>   # version 0.1.0
 ```
+
+`ref` pointe un commit précis : une app ne change jamais de version du
+paquet sans qu'on le décide (une étiquette `vX.Y.Z` marche aussi).
 
 ```dart
 import 'package:ebenivoire_common/media_viewer.dart';
@@ -31,9 +34,8 @@ import 'package:ebenivoire_common/media_viewer.dart';
 ## Modifier le paquet
 
 1. Modifier ici, `flutter analyze` et `flutter test`.
-2. Monter `version` dans `pubspec.yaml`, pousser, créer l'étiquette
-   (`git tag v0.1.1 && git push origin v0.1.1`).
-3. Dans chaque app, passer `ref:` à la nouvelle étiquette, puis
+2. Monter `version` dans `pubspec.yaml`, pousser sur `main`.
+3. Dans chaque app, passer `ref:` au nouveau numéro de commit, puis
    `flutter pub upgrade ebenivoire_common`.
 
 Travailler sur le paquet et une app en même temps, sans pousser : dans l'app,
