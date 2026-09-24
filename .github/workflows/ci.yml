@@ -1,0 +1,56 @@
+name: CI
+
+# Le paquet commun aux trois apps : une régression ici touche les trois.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+      # Documents et notes : rien à analyser (quota CI).
+      - "!**/*.md"
+      - "!docs/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**"
+      # Documents et notes : rien à analyser (quota CI).
+      - "!**/*.md"
+      - "!docs/**"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Flutter — format & analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.2
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        # The project is analyze-clean today, so any new warning is a real
+        # regression. This catches broken syntax, dead imports and type errors —
+        # NOT runtime bugs (a misplaced Obx, a wrong API field) which only show
+        # up on a device.
+        run: flutter analyze
+
+      - name: Formatting
+        # Non-blocking: reports drift without failing the build, since the repo
+        # was not fully formatted from day one.
+        continue-on-error: true
+        run: dart format --output=none --set-exit-if-changed lib
+
+      - name: Tests
+        run: flutter test

@@ -1,0 +1,30 @@
+name: ebenivoire_common
+description: >-
+  Code Flutter commun aux apps EbenIvoire (cliente, vendeur, console) :
+  un seul exemplaire, pour que les trois copies ne divergent plus.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.10.1
+  flutter: ">=3.44.0"
+
+# Mêmes contraintes que dans les trois apps : le paquet ne doit jamais forcer
+# une montée de version chez l'une d'elles.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cached_network_image: ^3.4.1
+  get: ^4.7.3
+  # 9.30.0 exactement, comme les apps : 8.x et 9.0 ne compilent pas sur
+  # Android (Kotlin 1.6).
+  sentry_flutter: 9.30.0
+  url_launcher: ^6.3.2
+  video_player: ^2.9.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
