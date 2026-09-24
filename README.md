@@ -35,6 +35,8 @@ paquet sans qu'on le décide (une étiquette `vX.Y.Z` marche aussi).
 import 'package:ebenivoire_common/media_viewer.dart';
 ```
 
+Où on en est et ce qui reste : [docs/SUITE.md](docs/SUITE.md).
+
 ## Modifier le paquet
 
 1. Modifier ici, `flutter analyze` et `flutter test`.
