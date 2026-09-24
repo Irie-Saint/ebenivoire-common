@@ -12,6 +12,10 @@ copies qu'il fallait penser à modifier ensemble.
 | `misconfigured_app.dart` | Écran affiché quand l'app est mal configurée |
 | `material_localizations.dart` | Traductions des widgets Flutter (sélecteur de date…) |
 | `responsive.dart` | Points de rupture mobile / tablette / bureau |
+| `currency.dart` | Devise et montants : `formatMoney(16000)` → « 16 000 FCFA » |
+| `jwt_utils.dart`, `request_type.dart`, `network_exceptions.dart` | Jetons, nature des appels, erreurs réseau |
+| `device_identity.dart` | Identité de l'appareil pour « Mes appareils » |
+| `theme_mode_service.dart`, `app_scroll_behavior.dart`, `map_night_style.dart` | Thème clair/sombre, barres de défilement, carte de nuit |
 | `truncation_probe.dart`, `debug_utils.dart` | Outils de débogage |
 
 ## Utilisation dans une app

@@ -38,7 +38,11 @@ class MisconfiguredApp extends StatelessWidget {
                     "flutter build apk --release "
                     "--dart-define-from-file=.env.production\n\n"
                     "(ou lancez build_release.bat)",
-                    style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
