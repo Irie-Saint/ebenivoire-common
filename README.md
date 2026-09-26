@@ -25,6 +25,8 @@ copies qu'il fallait penser à modifier ensemble.
 | `refresh_token_error.dart`, `server_unreachable.dart` | Refus du serveur ou panne ? |
 | `server_reachability.dart` | Le serveur répond-il ? (sondé tant qu'il ne répond pas) |
 | `session_messages.dart` | Leurs traductions FR/EN |
+| `session_validator.dart`, `session_check.dart`, `verify_token_error.dart` | Démarrage : que vaut la session enregistrée (valide / refusée / injoignable) |
+| `email_validation_error.dart` | Adresse e-mail refusée à l'inscription |
 
 ### Noyau de connexion : comment une app s'en sert
 

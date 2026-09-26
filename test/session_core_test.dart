@@ -12,6 +12,9 @@ import 'package:ebenivoire_common/network_exceptions.dart' as net;
 import 'package:ebenivoire_common/refresh_token_error.dart';
 import 'package:ebenivoire_common/request_type.dart';
 import 'package:ebenivoire_common/server_reachability.dart';
+import 'package:ebenivoire_common/session_check.dart';
+import 'package:ebenivoire_common/session_validator.dart';
+import 'package:ebenivoire_common/verify_token_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart' hide Response;
 
@@ -488,6 +491,97 @@ void main() {
       );
       expect(headers['Authorization'], 'Bearer ${storage.access}');
       expect(server.refreshCalls, 1);
+    });
+  });
+
+  group('démarrage', () {
+    test('renouvellements simultanés : UN seul appel au serveur', () async {
+      final results = await Future.wait(
+        List.generate(4, (_) => session.refreshTokensOrThrow()),
+      );
+      expect(server.refreshCalls, 1);
+      expect(results.map((r) => r.accessToken).toSet(), hasLength(1));
+      expect(storage.access, results.first.accessToken);
+    });
+
+    test(
+      'refreshTokensOrThrow : un refus lève, sans fermer la session',
+      () async {
+        server.refreshMode = 'refused';
+        await expectLater(
+          session.refreshTokensOrThrow(),
+          throwsA(
+            isA<RefreshTokenError>().having(
+              (e) => e.requiresReLogin,
+              'refus',
+              isTrue,
+            ),
+          ),
+        );
+        expect(session.expired, 0);
+      },
+    );
+
+    test('verifyStoredToken : oui, non, panne', () async {
+      server.business = (_) =>
+          (200, {'success': true, 'is_authenticated': true});
+      expect(await session.verifyStoredToken('a.b.c'), isTrue);
+
+      server.business = (_) => (401, {'detail': 'Not authenticated'});
+      expect(await session.verifyStoredToken('a.b.c'), isFalse);
+
+      for (final status in [0, 502, 503]) {
+        server.business = (_) => (status, {'message': 'x'});
+        await expectLater(
+          session.verifyStoredToken('a.b.c'),
+          throwsA(
+            isA<VerifyTokenError>().having(
+              (e) => e.isUnreachable,
+              'panne ($status)',
+              isTrue,
+            ),
+          ),
+        );
+      }
+      expect(session.expired, 0);
+    });
+
+    SessionValidator validator({required Future<void> Function() refresh}) =>
+        SessionValidator(
+          hasUserData: () async => true,
+          readAccessToken: () async => storage.access,
+          verify: session.verifyStoredToken,
+          refresh: refresh,
+          clearSession: () async => storage.clearAuthData(),
+        );
+
+    test('503 de la passerelle au renouvellement : session GARDÉE', () async {
+      // Avant : un 503 pendant un redéploiement, au lancement de l'app,
+      // était lu comme un refus et la session était effacée.
+      server.refreshMode = 'gateway';
+      final verdict = await validator(
+        refresh: () => session.refreshTokensOrThrow(),
+      ).check();
+      expect(verdict, SessionCheck.unreachable);
+      expect(storage.refresh, isNotEmpty);
+    });
+
+    test('refus au renouvellement : session effacée', () async {
+      server.refreshMode = 'refused';
+      final verdict = await validator(
+        refresh: () => session.refreshTokensOrThrow(),
+      ).check();
+      expect(verdict, SessionCheck.refused);
+      expect(storage.refresh, isEmpty);
+    });
+
+    test('serveur joignable : renouvelé puis vérifié', () async {
+      server.business = (_) =>
+          (200, {'success': true, 'is_authenticated': true});
+      final verdict = await validator(
+        refresh: () => session.refreshTokensOrThrow(),
+      ).check();
+      expect(verdict, SessionCheck.valid);
     });
   });
 

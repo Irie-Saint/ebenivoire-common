@@ -10,6 +10,7 @@ import 'jwt_utils.dart';
 import 'refresh_token_error.dart';
 import 'request_type.dart';
 import 'server_unreachable.dart';
+import 'verify_token_error.dart';
 
 /// Jetons reçus d'un renouvellement réussi.
 class TokenRefreshResult {
@@ -340,81 +341,101 @@ abstract class BaseSessionManager extends GetxService {
     }
   }
 
+  Future<TokenRefreshResult>? _inFlightRefresh;
+
+  /// Renouvelle et ENREGISTRE les jetons (stockage, mémoire, crochets), sans
+  /// jamais fermer la session : lève [RefreshTokenError] en cas d'échec et
+  /// laisse l'appelant décider ([RefreshTokenError.requiresReLogin] = refus).
+  ///
+  /// Les appels simultanés partagent UN seul renouvellement : deux
+  /// renouvellements parallèles avec le même jeton pouvaient faire refuser
+  /// le second (jeton déjà tourné) et déconnecter l'utilisateur.
+  ///
+  /// Sert au démarrage (l'écran de chargement) et à [refreshTokenSilently].
+  Future<TokenRefreshResult> refreshTokensOrThrow() {
+    return _inFlightRefresh ??= _doRefresh().whenComplete(
+      () => _inFlightRefresh = null,
+    );
+  }
+
+  Future<TokenRefreshResult> _doRefresh() async {
+    final refreshToken = await storageService.getRefreshToken();
+    if (refreshToken == null ||
+        refreshToken.isEmpty ||
+        !await _isRefreshTokenValid()) {
+      debugPrint('❌ Refresh token missing, invalid or expired');
+      throw RefreshTokenError(
+        message: 'core_session.refresh_failed'.tr,
+        errorType: 'INVALID_REFRESH_TOKEN',
+        success: false,
+        statusCode: 401,
+      );
+    }
+
+    final result = await _performTokenRefresh(refreshToken);
+
+    if (!JWTUtils.isValidJWTStructure(result.accessToken) ||
+        JWTUtils.isJWTExpired(result.accessToken)) {
+      // Réponse incohérente du serveur : ce n'est pas un refus du jeton.
+      debugPrint('❌ New access token is invalid or expired');
+      throw RefreshTokenError(
+        message: 'core_session.refresh_failed'.tr,
+        errorType: 'REFRESH_FAILED',
+        success: false,
+        statusCode: 500,
+      );
+    }
+
+    final newRefresh = result.refreshToken.isNotEmpty
+        ? result.refreshToken
+        : refreshToken;
+    await storageService.saveAccessToken(result.accessToken);
+    await storageService.saveRefreshToken(newRefresh);
+    await authManager.updateTokens(
+      accessToken: result.accessToken,
+      refreshToken: newRefresh,
+    );
+    await _verifyTokenSync();
+
+    sessionStatus.value = 'refreshed';
+    isSessionValid.value = true;
+    _lastSuccessfulRefresh = DateTime.now();
+    _lastRefreshFailureWasTemporary = false;
+    tokenRefreshCount.value++;
+    debugPrint(
+      '✅ Silent token refresh successful'
+      '${result.refreshRotated ? ' (refresh token rotated)' : ''}',
+    );
+
+    try {
+      await onTokensRefreshed(result);
+    } catch (e) {
+      debugPrint('⚠️ onTokensRefreshed failed: $e');
+    }
+    return result;
+  }
+
   /// Renouvelle le jeton d'accès. Vrai en cas de succès.
   ///
   /// Faux après une panne ([isRefreshTemporarilyUnavailable]) : la session
   /// est gardée. Faux après un refus : la session est fermée.
   Future<bool> refreshTokenSilently() async {
-    try {
-      if (_refreshInProgress || isRefreshingToken.value) {
-        // Un renouvellement est déjà en cours : on attend son résultat
-        // (10 s au plus). Une panne n'est JAMAIS un succès.
-        var waitCount = 0;
-        while ((_refreshInProgress || isRefreshingToken.value) &&
-            waitCount < 20) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          waitCount++;
-        }
-        return isSessionValid.value && !_lastRefreshFailureWasTemporary;
-      }
-
+    // Hors renouvellement déjà en cours : pas plus d'un essai par délai.
+    if (_inFlightRefresh == null) {
       final lastAttempt = _lastRefreshAttempt;
       if (lastAttempt != null &&
           DateTime.now().difference(lastAttempt).inSeconds <
               refreshCooldownSeconds) {
         return isSessionValid.value && !_lastRefreshFailureWasTemporary;
       }
-
-      _refreshInProgress = true;
-      isRefreshingToken.value = true;
       _lastRefreshAttempt = DateTime.now();
       _lastRefreshFailureWasTemporary = false;
+    }
 
-      final refreshToken = await storageService.getRefreshToken();
-      if (refreshToken == null ||
-          refreshToken.isEmpty ||
-          !await _isRefreshTokenValid()) {
-        debugPrint('❌ Refresh token missing, invalid or expired');
-        await handleSessionExpired();
-        return false;
-      }
-
-      final result = await _performTokenRefresh(refreshToken);
-
-      if (!JWTUtils.isValidJWTStructure(result.accessToken) ||
-          JWTUtils.isJWTExpired(result.accessToken)) {
-        debugPrint('❌ New access token is invalid or expired');
-        await handleSessionExpired();
-        return false;
-      }
-
-      await storageService.saveAccessToken(result.accessToken);
-      await storageService.saveRefreshToken(
-        result.refreshToken.isNotEmpty ? result.refreshToken : refreshToken,
-      );
-      await authManager.updateTokens(
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken.isNotEmpty
-            ? result.refreshToken
-            : refreshToken,
-      );
-      await _verifyTokenSync();
-
-      sessionStatus.value = 'refreshed';
-      isSessionValid.value = true;
-      _lastSuccessfulRefresh = DateTime.now();
-      _lastRefreshFailureWasTemporary = false;
-      tokenRefreshCount.value++;
-      debugPrint(
-        '✅ Silent token refresh successful'
-        '${result.refreshRotated ? ' (refresh token rotated)' : ''}',
-      );
-
-      try {
-        await onTokensRefreshed(result);
-      } catch (e) {
-        debugPrint('⚠️ onTokensRefreshed failed: $e');
-      }
+    _refreshInProgress = true;
+    isRefreshingToken.value = true;
+    try {
+      await refreshTokensOrThrow();
       return true;
     } on RefreshTokenError catch (e) {
       debugPrint(
@@ -437,6 +458,48 @@ abstract class BaseSessionManager extends GetxService {
     } finally {
       _refreshInProgress = false;
       isRefreshingToken.value = false;
+    }
+  }
+
+  /// Le serveur confirme-t-il la session enregistrée ? (démarrage)
+  ///
+  /// `true` = compte actif ; `false` = il répond non. Lève
+  /// [VerifyTokenError] `SERVER_UNREACHABLE` quand il n'a PAS pu répondre
+  /// (réseau, délai, 5xx — la passerelle pendant un redéploiement). Le
+  /// démarrage ne doit effacer la session que sur un vrai refus.
+  ///
+  /// Type `auth` + en-tête explicite : ni renouvellement automatique ni
+  /// fermeture de session déclenchés en douce pendant le démarrage.
+  Future<bool> verifyStoredToken(String token) async {
+    try {
+      final response = await apiService.fetch(
+        endpoint: '/auth/verify-token',
+        type: RequestType.auth,
+        additionalHeaders: {'Authorization': 'Bearer $token'},
+      );
+      final status = response['statusCode'] as int? ?? 500;
+      final body = response['body'];
+      if (status >= 500 || status == 429 || status == 408) {
+        throw VerifyTokenError(
+          message: 'core_session.unreachable'.tr,
+          errorCode: VerifyTokenError.unreachableCode,
+        );
+      }
+      if (status != 200 || body is! Map) return false;
+      return body['success'] == true && body['is_authenticated'] == true;
+    } catch (e) {
+      if (e is VerifyTokenError) rethrow;
+      debugPrint('❌ Verification error: ${e.runtimeType}');
+      if (isServerUnreachable(e)) {
+        throw VerifyTokenError(
+          message: 'core_session.unreachable'.tr,
+          errorCode: VerifyTokenError.unreachableCode,
+        );
+      }
+      throw VerifyTokenError(
+        message: 'loading.error.token.unknown'.tr,
+        errorCode: 'VERIFICATION_ERROR',
+      );
     }
   }
 

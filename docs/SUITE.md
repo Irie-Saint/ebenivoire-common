@@ -11,6 +11,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.1.0 | `7c355a5` | afficheur d'images/vidéos, Sentry, écran « mal configurée », traductions Material, responsive, outils de débogage |
 | 0.2.0 | `cfbad21` | devise unique (`formatMoney`, milliers séparés « 16 000 FCFA »), jwt_utils, request_type, network_exceptions, device_identity, theme_mode_service, app_scroll_behavior, map_night_style |
 | 0.3.0 | `1fd9e1e` | **noyau de connexion** : `base_api_service`, `base_session_manager`, `base_authentication_manager`, `base_storage_service`, `api_request_guard`, `refresh_token_error`, `server_unreachable`, `server_reachability`, `session_messages` (FR/EN) |
+| 0.4.0 | (ce commit) | démarrage de session : `session_validator`, `session_check`, `verify_token_error`, `email_validation_error` ; `refreshTokensOrThrow` (un seul renouvellement partagé) et `verifyStoredToken` dans la session commune |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -76,6 +77,16 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    seulement).
 2. **Fichiers encore en plusieurs copies** (mesuré le 26/09, taux de
    ressemblance entre apps ; C = cliente, V = vendeur, A = console) :
+
+   ✅ **a et b FAITS (0.4.0, 26/09)** : les trois modèles sont dans le paquet ;
+   `NetworkRecoveryService` supprimé (jamais appelé) ; `LoadingService`,
+   `SplashService`, `VerifyTokenResponse`, `RefreshTokenRequest/Response`
+   supprimés : les écrans de démarrage passent par la session commune.
+   Corrigé en chemin : un 502/503 de la passerelle au démarrage (redéploiement)
+   effaçait la session (le validateur ne gardait que la coupure réseau) ; la
+   console écrivait le jeton et les nouveaux jetons dans le journal ; deux
+   renouvellements simultanés au démarrage de la cliente. Démarrage vérifié sur
+   téléphone dans les 3 apps (jeton expiré → renouvelé, session gardée).
 
    **a. Identiques dans les trois — à déplacer tels quels**
    - `features/splash/models/session_validator.dart` (100 %)
