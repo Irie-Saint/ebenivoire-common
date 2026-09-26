@@ -17,6 +17,25 @@ copies qu'il fallait penser à modifier ensemble.
 | `device_identity.dart` | Identité de l'appareil pour « Mes appareils » |
 | `theme_mode_service.dart`, `app_scroll_behavior.dart`, `map_night_style.dart` | Thème clair/sombre, barres de défilement, carte de nuit |
 | `truncation_probe.dart`, `debug_utils.dart` | Outils de débogage |
+| `base_api_service.dart` | Appels au serveur : jeton vérifié avant l'envoi, 401 → renouvellement, panne → 503 `REFRESH_UNAVAILABLE` |
+| `base_session_manager.dart` | Session : vérifier, renouveler, fermer (seulement sur refus explicite) |
+| `base_authentication_manager.dart` | État de connexion : connecté tant que la session est renouvelable |
+| `base_storage_service.dart` | Stockage des jetons, de l'identité et du parcours de connexion |
+| `api_request_guard.dart` | En-têtes d'une requête protégée, jeton vérifié juste avant |
+| `refresh_token_error.dart`, `server_unreachable.dart` | Refus du serveur ou panne ? |
+| `server_reachability.dart` | Le serveur répond-il ? (sondé tant qu'il ne répond pas) |
+| `session_messages.dart` | Leurs traductions FR/EN |
+
+### Noyau de connexion : comment une app s'en sert
+
+Chaque app garde ses classes au même endroit (`lib/core/services/…`), qui
+**héritent** de celles du paquet et remplissent des crochets : services de
+l'app, codes d'état du compte qui ferment la session
+(`extraSessionEndingCodes`), ce qu'on vide à la fermeture
+(`onSessionCleared`), ce qu'on fait après un renouvellement
+(`onTokensRefreshed`), un 403 propre à l'app (`onForbidden`)… Règle : une
+panne ne déconnecte jamais ; seuls un refus explicite du serveur ou
+l'expiration du jeton de renouvellement ferment la session.
 
 ## Utilisation dans une app
 

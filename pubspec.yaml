@@ -2,7 +2,7 @@ name: ebenivoire_common
 description: >-
   Code Flutter commun aux apps EbenIvoire (cliente, vendeur, console) :
   un seul exemplaire, pour que les trois copies ne divergent plus.
-version: 0.2.0
+version: 0.3.0
 publish_to: none
 
 environment:
@@ -19,7 +19,13 @@ dependencies:
   cached_network_image: ^3.4.1
   # 12.x dans l'app cliente, 13.x dans les deux autres : les deux conviennent.
   device_info_plus: ">=12.3.0 <14.0.0"
+  # Noyau de connexion (appels au serveur, session, jetons) : mêmes
+  # contraintes que les trois apps.
+  dio: ^5.9.0
+  flutter_secure_storage: ^10.0.0-beta.5
   get: ^4.7.3
+  http_parser: ^4.1.2
+  image_picker: ^1.2.0
   intl: ^0.20.2
   # 9.30.0 exactement, comme les apps : 8.x et 9.0 ne compilent pas sur
   # Android (Kotlin 1.6).
