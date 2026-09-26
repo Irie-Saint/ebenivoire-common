@@ -27,6 +27,9 @@ copies qu'il fallait penser à modifier ensemble.
 | `session_messages.dart` | Leurs traductions FR/EN |
 | `session_validator.dart`, `session_check.dart`, `verify_token_error.dart` | Démarrage : que vaut la session enregistrée (valide / refusée / injoignable) |
 | `email_validation_error.dart` | Adresse e-mail refusée à l'inscription |
+| `auth/…` | Parcours de connexion vendeur et console : erreurs de connexion (`auth_error`), code par SMS, mot de passe oublié, vérification |
+| `account_security.dart` | Sécurité du compte (vendeur et console) |
+| `auto_retry_mixin.dart` | Réessai automatique d'un chargement (vendeur et console ; la cliente garde le sien) |
 
 ### Noyau de connexion : comment une app s'en sert
 

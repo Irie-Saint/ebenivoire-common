@@ -12,6 +12,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.2.0 | `cfbad21` | devise unique (`formatMoney`, milliers séparés « 16 000 FCFA »), jwt_utils, request_type, network_exceptions, device_identity, theme_mode_service, app_scroll_behavior, map_night_style |
 | 0.3.0 | `1fd9e1e` | **noyau de connexion** : `base_api_service`, `base_session_manager`, `base_authentication_manager`, `base_storage_service`, `api_request_guard`, `refresh_token_error`, `server_unreachable`, `server_reachability`, `session_messages` (FR/EN) |
 | 0.4.0 | (ce commit) | démarrage de session : `session_validator`, `session_check`, `verify_token_error`, `email_validation_error` ; `refreshTokensOrThrow` (un seul renouvellement partagé) et `verifyStoredToken` dans la session commune |
+| 0.5.0 | (ce commit) | lot c (1re partie) : parcours de connexion vendeur/console (`auth/…` : 15 modèles + `auth_error`), `account_security`, `auto_retry_mixin` |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -101,6 +102,20 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    - `core/services/loading_service.dart` (V/A 92 %)
    - `core/services/token_precheck_service.dart` (C seule, logique à
      rapprocher de celle des deux autres)
+
+   ✅ **c, 1re partie FAITE (0.5.0, 26/09)** : 15 modèles du parcours de
+   connexion, `auth_error` (version console = union : codes admin, code par
+   e-mail des super admins, « trop de tentatives »), `account_security`
+   (union), `auto_retry_mixin` (version vendeur, la plus stricte). Le vendeur a
+   reçu les textes FR/EN qui lui manquaient (`RATE_LIMITED`,
+   `SESSION_REVOKED`, `WRONG_CURRENT_PASSWORD` : avant, message générique).
+   ⚠️ Pas déplaçables tels quels (ils dépendent du code de l'app — il faudra
+   des crochets) : `auth_service`, `app_auth_service`, `auth_guard`,
+   `app_auth_guard`, `auth_debug_widget`, `api_config`, `lifecycle_service`
+   (NotificationService), `snackbar_config` (thème), `network_image_with_loader`,
+   `build_sticky_header`. Laissés par app : `environment` (configuration propre
+   à chaque app), `getx_initial_binding` (classe vide). À examiner :
+   `delta_html_converter` (126 lignes d'écart).
 
    **c. Identiques vendeur = console (la cliente diffère)**
    - parcours de connexion : `features/auth/models/**` (OTP, mot de passe
