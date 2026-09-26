@@ -30,6 +30,9 @@ copies qu'il fallait penser à modifier ensemble.
 | `auth/…` | Parcours de connexion vendeur et console : erreurs de connexion (`auth_error`), code par SMS, mot de passe oublié, vérification |
 | `account_security.dart` | Sécurité du compte (vendeur et console) |
 | `auto_retry_mixin.dart` | Réessai automatique d'un chargement (vendeur et console ; la cliente garde le sien) |
+| `greater_abidjan.dart` | Communes du Grand Abidjan (cliente et vendeur) |
+| `review_config.dart` | Réglages de la demande d'avis sur le store (cliente et vendeur) |
+| `delta_html_converter.dart` | Texte riche ↔ HTML, largeur des images comprise (vendeur et console) |
 
 ### Noyau de connexion : comment une app s'en sert
 

@@ -13,6 +13,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.3.0 | `1fd9e1e` | **noyau de connexion** : `base_api_service`, `base_session_manager`, `base_authentication_manager`, `base_storage_service`, `api_request_guard`, `refresh_token_error`, `server_unreachable`, `server_reachability`, `session_messages` (FR/EN) |
 | 0.4.0 | (ce commit) | démarrage de session : `session_validator`, `session_check`, `verify_token_error`, `email_validation_error` ; `refreshTokensOrThrow` (un seul renouvellement partagé) et `verifyStoredToken` dans la session commune |
 | 0.5.0 | (ce commit) | lot c (1re partie) : parcours de connexion vendeur/console (`auth/…` : 15 modèles + `auth_error`), `account_security`, `auto_retry_mixin` |
+| 0.6.0 | (ce commit) | lots d/e + `delta_html_converter` : `greater_abidjan`, `review_config` (cliente = vendeur), `delta_html_converter` (vendeur = console, version du vendeur) |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -114,8 +115,8 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    `app_auth_guard`, `auth_debug_widget`, `api_config`, `lifecycle_service`
    (NotificationService), `snackbar_config` (thème), `network_image_with_loader`,
    `build_sticky_header`. Laissés par app : `environment` (configuration propre
-   à chaque app), `getx_initial_binding` (classe vide). À examiner :
-   `delta_html_converter` (126 lignes d'écart).
+   à chaque app), `getx_initial_binding` (classe vide). `delta_html_converter` : FAIT en 0.6.0 (version
+   du vendeur ; la console perdait la largeur des images dans les CGU).
 
    **c. Identiques vendeur = console (la cliente diffère)**
    - parcours de connexion : `features/auth/models/**` (OTP, mot de passe
@@ -130,6 +131,15 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    - écrans : `network_image_with_loader` (98 %), `build_sticky_header`
      (93 %), `account_security` (93 %),
      `products/utils/delta_html_converter.dart` (87 %)
+
+   ✅ **d et e examinés (0.6.0, 26/09)** : `greater_abidjan` et `review_config`
+   déplacés (seuls les commentaires différaient). Restent par app :
+   `support_contact` (adresse de secours différente : support@ebenivoire.com
+   côté cliente, support@asameb.com côté vendeur — choix métier, le serveur
+   la remplace dès qu'il répond ; seule la cliente lit le délai de réponse),
+   `app_review_service`, `app_config_service`, `terms_service`, `app_skeleton`,
+   `app_loader` (ils dépendent du thème ou des services de l'app : crochets
+   nécessaires).
 
    **d. Identiques cliente = vendeur** : `constants/greater_abidjan.dart`,
    `constants/review_config.dart` (100 %), `app_review_service` (98 %),
