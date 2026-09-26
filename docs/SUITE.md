@@ -65,26 +65,62 @@ Corrigés en chemin (trouvés au test sur téléphone) :
 | Coupure 2 min, cliente | 0.3.0 | OK : 31 × 503, 0 fermeture, 0 × 401, panier rechargé seul |
 | Coupure 2 min, vendeur | 0.3.0 | OK : « Serveur injoignable », rechargement seul 3 s après le retour du réseau |
 | Démarrage vendeur, jeton d'accès expiré | 0.3.0 | OK : renouvelé au lancement, session gardée |
+| Démarrage cliente SANS réseau, jeton d'accès expiré | 0.3.0 | OK : `SERVER_UNREACHABLE` → session gardée, bandeau « Serveur injoignable » ; au retour, renouvelée |
+| Coupure 2 min, console (Commandes) | 0.3.0 | OK : « Serveur injoignable », rechargement seul au retour (console `cb8f04c`) |
 
 Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
 
 ## Reste à faire, dans l'ordre
 
-1. **Vérifier sur téléphone** : console (pas testée sur appareil) ; démarrage
-   de la cliente SANS réseau avec un jeton d'accès expiré (corrigé et testé en
-   automatique, pas encore sur appareil) ; coupure de 40 min avec le 0.3.0.
-2. **Fichiers presque identiques** à réconcilier puis déplacer :
-   `lifecycle_service` (vendeur ≈ console), `auto_retry_mixin` (vendeur ≈
-   console), `network_recovery_service` (coquille vide chez le vendeur : le
-   remplacer par `ServerReachability`), démarrage de session
-   (`session_validator`, `loading_controller`, `RefreshTokenResponse` :
-   dupliqués dans les trois apps), traductions communes (erreurs réseau).
-3. **Console** : brancher `ServerReachability` dans son état d'erreur, comme
-   le vendeur (« serveur injoignable » + rechargement tout seul).
-4. **À laisser par app** (différents pour de bonnes raisons) :
-   `notification_service`, `push_subscription_service`, `main.dart`, `theme`,
-   routes, traductions propres. La cliente garde volontairement son
-   chargement sans fin (squelette + réessai) pendant une coupure.
+1. **Coupure de 40 min avec le 0.3.0** sur téléphone (fait avec l'ancien code
+   seulement).
+2. **Fichiers encore en plusieurs copies** (mesuré le 26/09, taux de
+   ressemblance entre apps ; C = cliente, V = vendeur, A = console) :
+
+   **a. Identiques dans les trois — à déplacer tels quels**
+   - `features/splash/models/session_validator.dart` (100 %)
+   - `features/splash/models/verify_token_error.dart` (98 %)
+   - `features/auth/models/email_validation_error.dart` (95 %)
+   - `core/services/network_recovery_service.dart` (94 %) — coquille vide :
+     à SUPPRIMER au profit de `ServerReachability`, pas à déplacer.
+
+   **b. Démarrage de session (fin du noyau)**
+   - `features/splash/models/refresh_token_response.dart` (V/A 94 %, C 80 %)
+   - `features/splash/controllers/loading_controller.dart` (V/A 72 %, C 57 %)
+   - `core/services/loading_service.dart` (V/A 92 %)
+   - `core/services/token_precheck_service.dart` (C seule, logique à
+     rapprocher de celle des deux autres)
+
+   **c. Identiques vendeur = console (la cliente diffère)**
+   - parcours de connexion : `features/auth/models/**` (OTP, mot de passe
+     oublié, vérification : ~15 fichiers à 100 %), `auth_error` (90 %),
+     `auth_service` (93 %), `core/services/app_auth_service` (97 %)
+   - gardes : `core/mixins/auth_guard.dart`, `core/widgets/app_auth_guard.dart`
+     (100 %), `auth_debug_widget.dart` (100 %)
+   - outils : `core/mixins/auto_retry_mixin.dart` (98 %, C 87 %),
+     `core/services/lifecycle_service.dart` (98 %, C 50 %),
+     `config/environment.dart` (93 %, C 72 %), `config/api_config.dart`,
+     `config/snackbar_config.dart`, `config/getx_initial_binding.dart` (100 %)
+   - écrans : `network_image_with_loader` (98 %), `build_sticky_header`
+     (93 %), `account_security` (93 %),
+     `products/utils/delta_html_converter.dart` (87 %)
+
+   **d. Identiques cliente = vendeur** : `constants/greater_abidjan.dart`,
+   `constants/review_config.dart` (100 %), `app_review_service` (98 %),
+   `support_contact` (90 %), `app_config_service`, `terms_service` (79 %).
+
+   **e. Identiques cliente = console** : `widgets/app_skeleton.dart` (100 %),
+   `widgets/app_loader.dart` (90 %).
+
+   **f. À laisser par app** (différents pour de bonnes raisons) :
+   `main.dart`, `theme`, routes, menus, contrôleurs d'écrans,
+   `notification_service`, `push_subscription_service`, traductions propres.
+   La cliente garde volontairement son chargement sans fin (squelette +
+   réessai) pendant une coupure.
+
+   Ordre conseillé : a → b (finit le noyau) → c (parcours de connexion
+   vendeur/console) → d/e (petits fichiers). Les apps utilisent le paquet par
+   `ref:` : chaque lot = un commit du paquet + un `ref:` par app.
 
 ## Comment modifier le paquet
 
