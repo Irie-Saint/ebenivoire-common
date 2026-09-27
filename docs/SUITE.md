@@ -15,6 +15,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.5.0 | (ce commit) | lot c (1re partie) : parcours de connexion vendeur/console (`auth/…` : 15 modèles + `auth_error`), `account_security`, `auto_retry_mixin` |
 | 0.6.0 | (ce commit) | lots d/e + `delta_html_converter` : `greater_abidjan`, `review_config` (cliente = vendeur), `delta_html_converter` (vendeur = console, version du vendeur) |
 | 0.7.0 | (ce commit) | `app_lifecycle_service` (crochet `onAppResumed`) et `custom_snackbar` (couleurs par `configure`) pour le vendeur et la console ; la session s'abonne au cycle de vie même s'il est créé après elle |
+| 0.8.0 | (ce commit) | `brand_colors`, `app_skeleton`, `app_loader` (cliente, console), `support_contact` (support@ebenivoire.com partout), `base_app_config_service`, `platform_terms` + `base_terms_service`, `base_app_review_service` (cliente, vendeur) |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -131,6 +132,17 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    - écrans : `network_image_with_loader` (98 %), `build_sticky_header`
      (93 %), `account_security` (93 %),
      `products/utils/delta_html_converter.dart` (87 %)
+
+   ✅ **0.8.0 (27/09)** : lots d/e terminés. `support_contact` aligné sur
+   support@ebenivoire.com (décision du user). `app_review_service`,
+   `app_config_service`, `terms_service` avec crochets ; `app_skeleton`,
+   `app_loader` tels quels (même palette). Modèle des CGU unique
+   (`PlatformTerms`, version du vendeur : `isUpdate`, dates UTC lues
+   correctement ; `CustomerTerms`/`VendorTerms` = alias).
+   ⚠️ Trou serveur noté : `POST /api/profile/me/terms/accept` (cliente)
+   ignore la version lue — contrairement au vendeur, il peut enregistrer une
+   version que le client n'a jamais vue. À corriger côté serveur + envoyer la
+   version depuis la cliente.
 
    ✅ **0.7.0 (27/09)** : `lifecycle_service` et `snackbar_config` déplacés avec
    crochets. Corrigé : le cycle de vie n'était jamais créé dans la console, et

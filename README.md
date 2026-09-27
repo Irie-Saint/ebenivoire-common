@@ -34,6 +34,12 @@ copies qu'il fallait penser à modifier ensemble.
 | `review_config.dart` | Réglages de la demande d'avis sur le store (cliente et vendeur) |
 | `delta_html_converter.dart` | Texte riche ↔ HTML, largeur des images comprise (vendeur et console) |
 | `app_lifecycle_service.dart` | Premier plan / arrière-plan (crochet `onAppResumed`) — vendeur et console |
+| `brand_colors.dart` | Palette de la marque (mêmes valeurs que les `AppColors` des trois apps) |
+| `app_skeleton.dart`, `app_loader.dart` | Squelettes de chargement et indicateurs (cliente et console) |
+| `support_contact.dart` | Contact support (secours : support@ebenivoire.com ; le serveur le remplace) |
+| `base_app_config_service.dart` | Configuration publique au démarrage (crochet `onConfigLoaded`) |
+| `platform_terms.dart`, `base_terms_service.dart` | CGU : lire, accepter la version lue (adresses par app) |
+| `base_app_review_service.dart` | Demande d'avis sur le store (crochets `presentSheet`, `feedbackApp`) |
 | `custom_snackbar.dart` | Messages courts en haut de l'écran, aux couleurs données par l'app (`configure`) — vendeur et console |
 
 ### Noyau de connexion : comment une app s'en sert
