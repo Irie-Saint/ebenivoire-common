@@ -63,3 +63,16 @@ Future<Map<String, String>> validatedRequestHeaders({
     'Accept': 'application/json',
   };
 }
+
+/// En-têtes communs à toutes les requêtes du vendeur et de la console : la
+/// clé d'API de l'app (et le mode débogage quand le journal est actif). Ils
+/// s'ajoutent à ceux de [validatedRequestHeaders].
+Map<String, String> defaultApiHeaders({
+  required String apiKey,
+  bool debugMode = false,
+}) => {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  'X-API-Key': apiKey,
+  if (debugMode) 'X-Debug-Mode': 'true',
+};
