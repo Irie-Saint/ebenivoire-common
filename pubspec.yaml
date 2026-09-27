@@ -2,7 +2,7 @@ name: ebenivoire_common
 description: >-
   Code Flutter commun aux apps EbenIvoire (cliente, vendeur, console) :
   un seul exemplaire, pour que les trois copies ne divergent plus.
-version: 0.6.0
+version: 0.7.0
 publish_to: none
 
 environment:
@@ -22,6 +22,7 @@ dependencies:
   # Noyau de connexion (appels au serveur, session, jetons) : mêmes
   # contraintes que les trois apps.
   dio: ^5.9.0
+  flutter_screenutil: ^5.9.3
   flutter_secure_storage: ^10.0.0-beta.5
   get: ^4.7.3
   http_parser: ^4.1.2

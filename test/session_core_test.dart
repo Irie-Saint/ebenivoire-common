@@ -70,6 +70,10 @@ class _Session extends BaseSessionManager {
   final _Api _api;
   int expired = 0;
   int refreshedHooks = 0;
+  RxBool? lifecycle;
+
+  @override
+  RxBool? get appInBackground => lifecycle;
 
   @override
   BaseStorageService get storageService => _storage;
@@ -493,6 +497,22 @@ void main() {
       expect(server.refreshCalls, 1);
     });
   });
+
+  test(
+    'cycle de vie enregistré APRÈS la session : revérification au retour',
+    () async {
+      // Avant : la session ne s'abonnait qu'à sa création. Le vendeur
+      // enregistrait le cycle de vie après elle, la console jamais : le jeton
+      // n'était pas revérifié au retour au premier plan.
+      final background = RxBool(true);
+      session.lifecycle = background; // arrive après onInit
+      session.onReady();
+      background.value = false; // l'app revient au premier plan
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      expect(server.refreshCalls, 1); // jeton d'accès expiré → renouvelé
+      expect(session.expired, 0);
+    },
+  );
 
   group('démarrage', () {
     test('renouvellements simultanés : UN seul appel au serveur', () async {

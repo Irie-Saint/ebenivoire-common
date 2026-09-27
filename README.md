@@ -33,6 +33,8 @@ copies qu'il fallait penser à modifier ensemble.
 | `greater_abidjan.dart` | Communes du Grand Abidjan (cliente et vendeur) |
 | `review_config.dart` | Réglages de la demande d'avis sur le store (cliente et vendeur) |
 | `delta_html_converter.dart` | Texte riche ↔ HTML, largeur des images comprise (vendeur et console) |
+| `app_lifecycle_service.dart` | Premier plan / arrière-plan (crochet `onAppResumed`) — vendeur et console |
+| `custom_snackbar.dart` | Messages courts en haut de l'écran, aux couleurs données par l'app (`configure`) — vendeur et console |
 
 ### Noyau de connexion : comment une app s'en sert
 

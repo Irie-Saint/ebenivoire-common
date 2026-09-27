@@ -14,6 +14,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.4.0 | (ce commit) | démarrage de session : `session_validator`, `session_check`, `verify_token_error`, `email_validation_error` ; `refreshTokensOrThrow` (un seul renouvellement partagé) et `verifyStoredToken` dans la session commune |
 | 0.5.0 | (ce commit) | lot c (1re partie) : parcours de connexion vendeur/console (`auth/…` : 15 modèles + `auth_error`), `account_security`, `auto_retry_mixin` |
 | 0.6.0 | (ce commit) | lots d/e + `delta_html_converter` : `greater_abidjan`, `review_config` (cliente = vendeur), `delta_html_converter` (vendeur = console, version du vendeur) |
+| 0.7.0 | (ce commit) | `app_lifecycle_service` (crochet `onAppResumed`) et `custom_snackbar` (couleurs par `configure`) pour le vendeur et la console ; la session s'abonne au cycle de vie même s'il est créé après elle |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -112,8 +113,7 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    `SESSION_REVOKED`, `WRONG_CURRENT_PASSWORD` : avant, message générique).
    ⚠️ Pas déplaçables tels quels (ils dépendent du code de l'app — il faudra
    des crochets) : `auth_service`, `app_auth_service`, `auth_guard`,
-   `app_auth_guard`, `auth_debug_widget`, `api_config`, `lifecycle_service`
-   (NotificationService), `snackbar_config` (thème), `network_image_with_loader`,
+   `app_auth_guard`, `auth_debug_widget`, `api_config`, `network_image_with_loader`,
    `build_sticky_header`. Laissés par app : `environment` (configuration propre
    à chaque app), `getx_initial_binding` (classe vide). `delta_html_converter` : FAIT en 0.6.0 (version
    du vendeur ; la console perdait la largeur des images dans les CGU).
@@ -131,6 +131,11 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    - écrans : `network_image_with_loader` (98 %), `build_sticky_header`
      (93 %), `account_security` (93 %),
      `products/utils/delta_html_converter.dart` (87 %)
+
+   ✅ **0.7.0 (27/09)** : `lifecycle_service` et `snackbar_config` déplacés avec
+   crochets. Corrigé : le cycle de vie n'était jamais créé dans la console, et
+   créé APRÈS la session chez le vendeur — dans les deux cas, pas de
+   revérification du jeton au retour au premier plan.
 
    ✅ **d et e examinés (0.6.0, 26/09)** : `greater_abidjan` et `review_config`
    déplacés (seuls les commentaires différaient). Restent par app :

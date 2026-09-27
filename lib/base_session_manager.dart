@@ -131,15 +131,28 @@ abstract class BaseSessionManager extends GetxService {
     _startBackgroundTokenMonitoring();
   }
 
+  /// ⚠️ Le service de cycle de vie peut être enregistré APRÈS la session
+  /// (ordre de main.dart) : on retente une fois l'app prête. Sans cela, la
+  /// vérification du jeton au retour au premier plan ne se faisait jamais.
+  @override
+  void onReady() {
+    super.onReady();
+    _subscribeToLifecycleEvents();
+  }
+
+  bool _lifecycleSubscribed = false;
+
   void _subscribeToLifecycleEvents() {
+    if (_lifecycleSubscribed) return;
     try {
       final background = appInBackground;
       if (background == null) {
         debugPrint(
-          '⚠️ AppLifecycleService not available, lifecycle monitoring disabled',
+          '⚠️ AppLifecycleService not available yet, lifecycle monitoring off',
         );
         return;
       }
+      _lifecycleSubscribed = true;
       ever(background, (bool isInBackground) {
         if (isInBackground) {
           _lastTokenCheck = DateTime.now();
