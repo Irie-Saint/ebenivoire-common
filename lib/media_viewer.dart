@@ -517,8 +517,11 @@ class _ZoomableImageState extends State<_ZoomableImage>
           child: Image(
             image: widget.image,
             fit: BoxFit.contain,
-            loadingBuilder: (_, child, progress) =>
-                progress == null ? child : _loading,
+            // Loading = until the first frame is painted. A loadingBuilder
+            // only fires once bytes arrive: before that the viewer stayed
+            // plain black, without the brand name.
+            frameBuilder: (_, child, frame, wasSynchronouslyLoaded) =>
+                frame == null && !wasSynchronouslyLoaded ? _loading : child,
             errorBuilder: (_, _, _) {
               final image = widget.image;
               final url = image is CachedNetworkImageProvider

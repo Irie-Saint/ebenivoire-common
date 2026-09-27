@@ -16,7 +16,8 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.6.0 | (ce commit) | lots d/e + `delta_html_converter` : `greater_abidjan`, `review_config` (cliente = vendeur), `delta_html_converter` (vendeur = console, version du vendeur) |
 | 0.7.0 | (ce commit) | `app_lifecycle_service` (crochet `onAppResumed`) et `custom_snackbar` (couleurs par `configure`) pour le vendeur et la console ; la session s'abonne au cycle de vie même s'il est créé après elle |
 | 0.8.0 | `432db07` | `brand_colors`, `app_skeleton`, `app_loader` (cliente, console), `support_contact` (support@ebenivoire.com partout), `base_app_config_service`, `platform_terms` + `base_terms_service`, `base_app_review_service` (cliente, vendeur) |
-| 0.9.0 | (ce commit) | `brand_name_loader` : chargement des photos = le nom « EbènIvoire » qui scintille (`BrandNameLoader`, `SkeletonPhoto`, `ShimmerBox`) ; la visionneuse plein écran l'affiche en blanc sur fond noir à la place du rond qui tourne |
+| 0.9.0 | `8db9bde` | `brand_name_loader` : chargement des photos = le nom « EbènIvoire » qui scintille (`BrandNameLoader`, `SkeletonPhoto`, `ShimmerBox`) ; la visionneuse plein écran l'affiche en blanc sur fond noir à la place du rond qui tourne |
+| 0.9.1 | (ce commit) | visionneuse : le nom s'affiche dès l'ouverture (avant, écran noir jusqu'aux premiers octets reçus) |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.

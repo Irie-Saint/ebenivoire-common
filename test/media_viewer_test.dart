@@ -1,3 +1,4 @@
+import 'package:ebenivoire_common/brand_name_loader.dart';
 import 'package:ebenivoire_common/media_viewer_messages.dart';
 import 'package:ebenivoire_common/media_viewer.dart';
 import 'package:flutter/material.dart';
@@ -73,5 +74,8 @@ void main() {
     expect(find.text('Photo'), findsOneWidget);
     expect(find.text('1 / 1'), findsNothing);
     expect(find.byTooltip('Suivante'), findsNothing);
+    // Photo pas encore arrivée : le nom de la marque, dès l'ouverture (avant,
+    // l'écran restait noir jusqu'aux premiers octets reçus).
+    expect(find.text(BrandNameLoader.brandName), findsOneWidget);
   });
 }
