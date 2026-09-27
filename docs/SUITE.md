@@ -150,9 +150,12 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    (`brand_name_loader`), idée du user. Règles : le nom est un MOTIF (affiché
    à toute taille, même illisible) ; ⚠️ jamais sous un `AppShimmer` (le reflet
    le repeint en aplat) — dans un squelette, reflet sur les barres
-   (`ShimmerBox`) et zone photo en `SkeletonPhoto`. Cliente : toutes les
-   images faites. Vendeur et console : à faire (même balayage : composant
-   d'image, images directes, squelettes à zone photo).
+   (`ShimmerBox`) et zone photo en `SkeletonPhoto`. FAIT dans les 3 apps
+   (27/09) : cliente `f66af30`+`aef4f5c`, vendeur `6c631eb`, console
+   `fe7dbab`, chacune avec un test garde-fou « jamais sous un reflet ».
+   ⚠️ Le `placeholder` d'un `CachedNetworkImage` n'hérite PAS de sa taille :
+   l'entourer d'un `SizedBox(width, height)` ; pour `Image.network`,
+   `frameBuilder` (pas `loadingBuilder`, qui ne part qu'aux premiers octets).
 
    ✅ **0.7.0 (27/09)** : `lifecycle_service` et `snackbar_config` déplacés avec
    crochets. Corrigé : le cycle de vie n'était jamais créé dans la console, et
