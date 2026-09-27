@@ -15,7 +15,8 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.5.0 | (ce commit) | lot c (1re partie) : parcours de connexion vendeur/console (`auth/…` : 15 modèles + `auth_error`), `account_security`, `auto_retry_mixin` |
 | 0.6.0 | (ce commit) | lots d/e + `delta_html_converter` : `greater_abidjan`, `review_config` (cliente = vendeur), `delta_html_converter` (vendeur = console, version du vendeur) |
 | 0.7.0 | (ce commit) | `app_lifecycle_service` (crochet `onAppResumed`) et `custom_snackbar` (couleurs par `configure`) pour le vendeur et la console ; la session s'abonne au cycle de vie même s'il est créé après elle |
-| 0.8.0 | (ce commit) | `brand_colors`, `app_skeleton`, `app_loader` (cliente, console), `support_contact` (support@ebenivoire.com partout), `base_app_config_service`, `platform_terms` + `base_terms_service`, `base_app_review_service` (cliente, vendeur) |
+| 0.8.0 | `432db07` | `brand_colors`, `app_skeleton`, `app_loader` (cliente, console), `support_contact` (support@ebenivoire.com partout), `base_app_config_service`, `platform_terms` + `base_terms_service`, `base_app_review_service` (cliente, vendeur) |
+| 0.9.0 | (ce commit) | `brand_name_loader` : chargement des photos = le nom « EbènIvoire » qui scintille (`BrandNameLoader`, `SkeletonPhoto`, `ShimmerBox`) ; la visionneuse plein écran l'affiche en blanc sur fond noir à la place du rond qui tourne |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
@@ -141,8 +142,16 @@ Tests : paquet 38, cliente 287, vendeur 302, console 483 — tous verts.
    correctement ; `CustomerTerms`/`VendorTerms` = alias).
    ⚠️ Trou serveur noté : `POST /api/profile/me/terms/accept` (cliente)
    ignore la version lue — contrairement au vendeur, il peut enregistrer une
-   version que le client n'a jamais vue. À corriger côté serveur + envoyer la
-   version depuis la cliente.
+   version que le client n'a jamais vue. → CORRIGÉ le 27/09 (serveur
+   `afd76d8`, cliente `092c5bc`).
+
+   ✅ **0.9.0 (27/09)** : chargement des photos avec le nom de la marque
+   (`brand_name_loader`), idée du user. Règles : le nom est un MOTIF (affiché
+   à toute taille, même illisible) ; ⚠️ jamais sous un `AppShimmer` (le reflet
+   le repeint en aplat) — dans un squelette, reflet sur les barres
+   (`ShimmerBox`) et zone photo en `SkeletonPhoto`. Cliente : toutes les
+   images faites. Vendeur et console : à faire (même balayage : composant
+   d'image, images directes, squelettes à zone photo).
 
    ✅ **0.7.0 (27/09)** : `lifecycle_service` et `snackbar_config` déplacés avec
    crochets. Corrigé : le cycle de vie n'était jamais créé dans la console, et

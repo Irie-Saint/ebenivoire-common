@@ -21,6 +21,8 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import 'brand_name_loader.dart';
+
 /// Un élément à afficher : une image ou une vidéo.
 class MediaItem {
   final String url;
@@ -297,12 +299,10 @@ class _Failure extends StatelessWidget {
   }
 }
 
-const _spinner = Center(
-  child: SizedBox(
-    width: 32,
-    height: 32,
-    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white70),
-  ),
+/// Chargement d'une photo ou d'une vidéo : le nom de la marque qui scintille
+/// en blanc sur le fond noir (au lieu d'un rond qui tourne).
+const _loading = Center(
+  child: SizedBox(width: 260, height: 72, child: BrandNameLoader(onDark: true)),
 );
 
 Future<void> _openElsewhere(String url) async {
@@ -518,7 +518,7 @@ class _ZoomableImageState extends State<_ZoomableImage>
             image: widget.image,
             fit: BoxFit.contain,
             loadingBuilder: (_, child, progress) =>
-                progress == null ? child : _spinner,
+                progress == null ? child : _loading,
             errorBuilder: (_, _, _) {
               final image = widget.image;
               final url = image is CachedNetworkImageProvider
@@ -613,7 +613,7 @@ class _VideoPageState extends State<_VideoPage> {
         onOpenElsewhere: _isRemote ? () => _openElsewhere(widget.url) : null,
       );
     } else if (!_ready) {
-      body = _spinner;
+      body = _loading;
     } else {
       body = GestureDetector(
         onTap: _togglePlay,
@@ -770,7 +770,8 @@ class MediaThumbnail extends StatelessWidget {
                     CachedNetworkImage(
                       imageUrl: picture,
                       fit: BoxFit.cover,
-                      placeholder: (_, _) => const SizedBox.shrink(),
+                      placeholder: (_, _) =>
+                          const BrandNameLoader(onDark: true),
                       errorWidget: (_, _, _) => const Icon(
                         Icons.broken_image_outlined,
                         color: Colors.white54,
