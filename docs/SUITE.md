@@ -21,6 +21,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.10.0 | `d8b122f` | lot c, 2e partie (1/3) : garde racine `base_app_auth_guard` (vendeur, console) avec crochets ; la garde « mixin » `core/mixins/auth_guard.dart`, jamais utilisée, supprimée des deux apps |
 | 0.11.0 | `4ba2995` | lot c, 2e partie (2/3) : `base_app_auth_service` (état de session lu par la garde ; l'ancienne vérification de démarrage, morte et dangereuse — elle effaçait la session en cas de panne —, retirée) et `base_auth_service` (connexion, codes, mots de passe ; journal sans corps ni détail d'erreur). Écran de débogage `/debug/auth`, accessible en production, supprimé des deux apps |
 | 0.12.0 | (ce commit) | lot c, 2e partie (3/3, FIN) : `network_image_with_loader` (vendeur, console) et `defaultApiHeaders` ; `ApiConfig` des apps réduit aux 3 membres utilisés (≈150 lignes mortes retirées). `build_sticky_header` LAISSÉ par app (il dépend de 4 éléments de l'app) ; la console a reçu la protection du vendeur contre les titres longs (débordait de 741 px sur un téléphone étroit) |
+| 0.12.1 | (ce commit) | correctif : `OtpVerificationError` lit aussi les erreurs À PLAT du serveur (`message`, `error_code` au premier niveau) — seul `detail` était lu, d'où l'anglais « Verification failed » à l'écran ; `userMessage` ne renvoie plus jamais le repli anglais ni un message technique de validation |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
