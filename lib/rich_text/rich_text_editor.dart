@@ -30,6 +30,15 @@ class RichTextImageException implements Exception {
   String toString() => message;
 }
 
+/// Une app peut présenter les actions de l'éditeur avec son propre kit UI.
+/// `null` signifie abandon ; pour l'image `0` signifie retrait.
+typedef RichImageMenu =
+    Future<int?> Function(BuildContext context, int currentWidth);
+typedef RichTableMenu =
+    Future<RichTableData?> Function(BuildContext context, RichTableData data);
+typedef RichLinkMenu =
+    Future<String?> Function(BuildContext context, String currentUrl);
+
 /// Couleurs et typographie de l'éditeur, données par chaque app (kit vendeur,
 /// console) ; par défaut, celles du thème.
 class RichTextEditorStyle {
@@ -89,6 +98,9 @@ class RichTextEditor extends StatefulWidget {
     this.helperText,
     this.errorText,
     this.onPickImage,
+    this.imageMenu,
+    this.tableMenu,
+    this.linkMenu,
     this.style = const RichTextEditorStyle(),
     this.minHeight = 180,
     this.maxHeight = 420,
@@ -105,6 +117,9 @@ class RichTextEditor extends StatefulWidget {
   /// lui, l'outil image est masqué. Une [RichTextImageException] affiche son
   /// message sous l'éditeur.
   final Future<String?> Function()? onPickImage;
+  final RichImageMenu? imageMenu;
+  final RichTableMenu? tableMenu;
+  final RichLinkMenu? linkMenu;
   final RichTextEditorStyle style;
   final double minHeight, maxHeight;
   final bool enabled;
@@ -288,15 +303,19 @@ class _RichTextEditorState extends State<RichTextEditor> {
 
   Future<void> _setLink() async {
     final previous = _selectionStyle[Attribute.link.key]?.value?.toString();
-    final href = await showDialog<String>(
-      context: context,
-      builder: (_) => _LinkDialog(initial: previous ?? ''),
-    );
+    final href = widget.linkMenu != null
+        ? await widget.linkMenu!(context, previous ?? '')
+        : await showDialog<String>(
+            context: context,
+            builder: (_) => _LinkDialog(initial: previous ?? ''),
+          );
     if (href == null || !mounted) return;
     if (href.isEmpty) {
       _controller.formatSelection(Attribute.clone(Attribute.link, null));
       return;
     }
+    final safeHref = RichTextLinks.parse(href)?.toString();
+    if (safeHref == null) return;
     final selection = _controller.selection;
     if (selection.isCollapsed && previous == null) {
       // Rien de sélectionné : l'adresse elle-même devient le texte du lien.
@@ -305,13 +324,13 @@ class _RichTextEditorState extends State<RichTextEditor> {
         ..replaceText(
           index,
           0,
-          href,
-          TextSelection.collapsed(offset: index + href.length),
+          safeHref,
+          TextSelection.collapsed(offset: index + safeHref.length),
         )
-        ..formatText(index, href.length, LinkAttribute(href));
+        ..formatText(index, safeHref.length, LinkAttribute(safeHref));
       return;
     }
-    _controller.formatSelection(LinkAttribute(href));
+    _controller.formatSelection(LinkAttribute(safeHref));
   }
 
   Future<void> _pickImage() async {
@@ -388,11 +407,13 @@ class _RichTextEditorState extends State<RichTextEditor> {
                           radius: widget.style.radius,
                           onWidth: _setImageWidth,
                           onRemove: (offset) => _replaceBlock(offset, null),
+                          menu: widget.imageMenu,
                         ),
                         _DividerEmbedBuilder(palette),
                         _TableEmbedBuilder(
                           palette: palette,
                           onChanged: _replaceBlock,
+                          menu: widget.tableMenu,
                         ),
                         _HtmlEmbedBuilder(
                           palette: palette,
@@ -764,12 +785,14 @@ class _ImageEmbedBuilder extends EmbedBuilder {
     required this.radius,
     required this.onWidth,
     required this.onRemove,
+    this.menu,
   });
 
   final _Palette palette;
   final double radius;
   final void Function(int offset, int? width) onWidth;
   final ValueChanged<int> onRemove;
+  final RichImageMenu? menu;
 
   @override
   String get key => BlockEmbed.imageType;
@@ -823,64 +846,68 @@ class _ImageEmbedBuilder extends EmbedBuilder {
   }
 
   Future<void> _menu(BuildContext context, int offset, int current) async {
-    final choice = await showModalBottomSheet<int>(
-      context: context,
-      // Tablette / ordinateur : une feuille à largeur de lecture, pas
-      // étirée d'un bord à l'autre.
-      constraints: const BoxConstraints(maxWidth: 560),
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                richTextTr('rich_text.image.title'),
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final w in const [25, 50, 75, 100])
-                    ChoiceChip(
-                      key: ValueKey('rich-image-width-$w'),
-                      label: Text(
-                        w == 100
-                            ? richTextTr('rich_text.image.full')
-                            : richTextTr('rich_text.image.width', {
-                                'value': '$w',
-                              }),
+    final choice = menu != null
+        ? await menu!(context, current)
+        : await showModalBottomSheet<int>(
+            context: context,
+            // Tablette / ordinateur : une feuille à largeur de lecture, pas
+            // étirée d'un bord à l'autre.
+            constraints: const BoxConstraints(maxWidth: 560),
+            useSafeArea: true,
+            showDragHandle: true,
+            builder: (context) => SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      richTextTr('rich_text.image.title'),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
                       ),
-                      selected: current == w,
-                      selectedColor: palette.accent.withValues(alpha: .14),
-                      onSelected: (_) => Navigator.of(context).pop(w),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                key: const Key('rich-image-remove'),
-                style: TextButton.styleFrom(
-                  foregroundColor: palette.danger,
-                  alignment: Alignment.centerLeft,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final w in const [25, 50, 75, 100])
+                          ChoiceChip(
+                            key: ValueKey('rich-image-width-$w'),
+                            label: Text(
+                              w == 100
+                                  ? richTextTr('rich_text.image.full')
+                                  : richTextTr('rich_text.image.width', {
+                                      'value': '$w',
+                                    }),
+                            ),
+                            selected: current == w,
+                            selectedColor: palette.accent.withValues(
+                              alpha: .14,
+                            ),
+                            onSelected: (_) => Navigator.of(context).pop(w),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      key: const Key('rich-image-remove'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: palette.danger,
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(0),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      label: Text(richTextTr('rich_text.image.remove')),
+                    ),
+                  ],
                 ),
-                onPressed: () => Navigator.of(context).pop(0),
-                icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                label: Text(richTextTr('rich_text.image.remove')),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+            ),
+          );
     if (choice == null) return;
     if (choice == 0) {
       onRemove(offset);
@@ -907,10 +934,15 @@ class _DividerEmbedBuilder extends EmbedBuilder {
 
 /// Tableau à cellules de texte : affiché, et modifié en le touchant.
 class _TableEmbedBuilder extends EmbedBuilder {
-  const _TableEmbedBuilder({required this.palette, required this.onChanged});
+  const _TableEmbedBuilder({
+    required this.palette,
+    required this.onChanged,
+    this.menu,
+  });
 
   final _Palette palette;
   final void Function(int offset, BlockEmbed? block) onChanged;
+  final RichTableMenu? menu;
 
   @override
   String get key => richTextTableEmbed;
@@ -926,7 +958,9 @@ class _TableEmbedBuilder extends EmbedBuilder {
             ? null
             : () async {
                 final offset = embedContext.node.documentOffset;
-                final result = await _showTableEditor(context, data, palette);
+                final result = menu != null
+                    ? await menu!(context, data)
+                    : await _showTableEditor(context, data, palette);
                 if (result == null) return;
                 onChanged(
                   offset,

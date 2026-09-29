@@ -1,6 +1,7 @@
 import 'package:ebenivoire_common/material_localizations.dart';
 import 'package:ebenivoire_common/rich_text/rich_html_view.dart';
 import 'package:ebenivoire_common/rich_text/rich_text_editor.dart';
+import 'package:ebenivoire_common/rich_text/rich_text_html.dart';
 import 'package:ebenivoire_common/rich_text/rich_text_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,6 +80,59 @@ void main() {
     await tester.tap(find.byKey(const Key('rich-image-remove')));
     await tester.pumpAndSettle();
     expect(html, isNot(contains('<img')));
+  });
+
+  testWidgets('les menus fournis par l’app remplacent ceux par défaut', (
+    tester,
+  ) async {
+    String? html;
+    var imageOpened = false;
+    var tableOpened = false;
+    var linkOpened = false;
+    await tester.pumpWidget(
+      _app(
+        RichTextEditor(
+          value:
+              '<p>Texte</p><img src="https://cdn.test/a.jpg" alt="" />'
+              '<table><tbody><tr><td><p>Avant</p></td></tr></tbody></table>',
+          onChanged: (value) => html = value,
+          imageMenu: (_, current) async {
+            imageOpened = true;
+            expect(current, 100);
+            return 50;
+          },
+          tableMenu: (_, data) async {
+            tableOpened = true;
+            expect(data.rows.first.first, 'Avant');
+            return const RichTableData(
+              rows: [
+                <String>['Après'],
+              ],
+            );
+          },
+          linkMenu: (_, current) async {
+            linkOpened = true;
+            expect(current, isEmpty);
+            return 'https://ebenivoire.ci';
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('rich-image')));
+    await tester.pumpAndSettle();
+    expect(imageOpened, isTrue);
+    expect(html, contains('style="width:50%"'));
+
+    await tester.tap(find.byKey(const Key('rich-table')));
+    await tester.pumpAndSettle();
+    expect(tableOpened, isTrue);
+    expect(html, contains('Après'));
+
+    await tester.tap(find.byTooltip('Lien'));
+    await tester.pumpAndSettle();
+    expect(linkOpened, isTrue);
+    expect(html, contains('https://ebenivoire.ci'));
   });
 
   testWidgets('l’erreur d’envoi d’une image s’affiche sous l’éditeur', (
