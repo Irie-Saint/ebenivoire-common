@@ -31,4 +31,49 @@ void main() {
     expect(html, contains('Premier paragraphe.'));
     expect(html, contains('Second paragraphe.'));
   });
+
+  test('le gras d’un mot reste sur ce mot', () {
+    final html = roundTrip('<p>Texte avec <strong>gras</strong> ok.</p>');
+    expect(html, '<p>Texte avec <strong>gras</strong> ok.</p>');
+  });
+
+  test('aucun titre ni puce vide fabriqué à l’enregistrement', () {
+    const source =
+        '<h2>Titre ici</h2><p>Texte.</p><ul><li>Un</li><li>Deux</li></ul>';
+    final once = roundTrip(source);
+    expect(once, source);
+    // Enregistrer dix fois ne fait rien grossir.
+    var html = once;
+    for (var i = 0; i < 10; i++) {
+      html = roundTrip(html);
+    }
+    expect(html, source);
+  });
+
+  test('listes numérotées, italique, souligné, lien', () {
+    const source =
+        '<ol><li><em>Premier</em></li><li><u>Second</u></li></ol>'
+        '<p>Voir <a href="https://ebenivoire.test">le site</a>.</p>';
+    expect(roundTrip(source), source);
+  });
+
+  test('HTML d’un autre éditeur : espaces et balises sans importance', () {
+    final html = roundTrip(
+      '<div>\n  <p>  Bonjour <b>vous</b></p>\n</div><p></p>',
+    );
+    expect(html, '<p>Bonjour <strong>vous</strong></p>');
+  });
+
+  test('un caractère spécial reste du texte', () {
+    expect(
+      roundTrip('<p>2 &lt; 3 &amp; « ok »</p>'),
+      '<p>2 &lt; 3 &amp; « ok »</p>',
+    );
+  });
+
+  test('une image entre deux paragraphes garde sa place', () {
+    const source =
+        '<p>Avant</p><img src="https://cdn.test/a.jpg" alt="" style="width:50%" /><p>Après</p>';
+    expect(roundTrip(source), source);
+  });
 }

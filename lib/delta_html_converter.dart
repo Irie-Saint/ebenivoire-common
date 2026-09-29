@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html_parser;
 import 'package:parchment/parchment.dart';
 
-/// Utility class to convert between Parchment Delta format and HTML
-/// for WordPress API integration
+/// Texte riche ↔ HTML : descriptions produit (vendeur), CGU et politiques
+/// produit (console). Même approche que l'éditeur riche d'AEECI : un vrai
+/// analyseur HTML à l'aller, une construction ligne par ligne au retour.
 class DeltaHtmlConverter {
   /// Normalize HTML for comparison purposes
   /// Strips CSS classes, styles, and normalizes structure to compare content only
@@ -54,479 +57,403 @@ class DeltaHtmlConverter {
     return normalized1 == normalized2;
   }
 
-  /// Convert Delta document to HTML string for WordPress API
+  /// Document de l'éditeur → HTML (description produit, CGU, politiques).
+  ///
+  /// Construit LIGNE par ligne (comme l'éditeur riche d'AEECI) : aucun bloc
+  /// vide n'est fabriqué. L'ancienne version écrivait `<h2></h2>` et
+  /// `<li></li>` en trop : chaque enregistrement ajoutait des titres et des
+  /// puces vides à la description.
   static String deltaToHtml(ParchmentDocument document) {
     try {
-      final delta = document.toDelta();
-      final buffer = StringBuffer();
-      String currentBlock = '';
-      bool inList = false;
-      String? listType;
-
-      for (var op in delta.toList()) {
-        if (op.isInsert) {
-          final data = op.data;
-          final attributes = op.attributes ?? {};
-
-          // Handle embeds (images)
-          if (data is Map) {
-            // Check for image embed - Parchment format has 'source' key
-            String? imageSrc;
-            if (data.containsKey('source')) {
-              imageSrc = data['source']?.toString();
-            } else if (data.containsKey('image')) {
-              // Legacy format or nested format
-              final imageData = data['image'];
-              if (imageData is String) {
-                imageSrc = imageData;
-              } else if (imageData is Map && imageData.containsKey('source')) {
-                imageSrc = imageData['source']?.toString();
-              }
-            }
-
-            // Optional per-image display width (percentage). Preserved so the
-            // vendor's chosen size survives save/load and reaches the storefront.
-            int? imageWidth;
-            final rawWidth = data['width'];
-            if (rawWidth is int) {
-              imageWidth = rawWidth;
-            } else if (rawWidth is num) {
-              imageWidth = rawWidth.toInt();
-            } else if (rawWidth is String) {
-              imageWidth = int.tryParse(rawWidth);
-            }
-
-            if (imageSrc != null && imageSrc.isNotEmpty) {
-              if (imageWidth != null && imageWidth > 0 && imageWidth <= 100) {
-                buffer.write(
-                  '<img src="$imageSrc" alt="" style="width:$imageWidth%" />',
-                );
-              } else {
-                buffer.write('<img src="$imageSrc" alt="" />');
-              }
-            }
-            continue;
-          }
-
-          // Handle text
-          if (data is String) {
-            final lines = data.split('\n');
-
-            for (int i = 0; i < lines.length; i++) {
-              String line = lines[i];
-
-              // Apply inline styles
-              if (attributes['b'] == true) {
-                line = '<strong>$line</strong>';
-              }
-              if (attributes['i'] == true) {
-                line = '<em>$line</em>';
-              }
-              if (attributes['u'] == true) {
-                line = '<u>$line</u>';
-              }
-              if (attributes['s'] == true) {
-                line = '<s>$line</s>';
-              }
-
-              currentBlock += line;
-
-              // Handle newlines (block boundaries)
-              if (i < lines.length - 1 || data.endsWith('\n')) {
-                // Check for block attributes
-                final blockType = attributes['block'];
-                final heading = attributes['heading'];
-
-                if (blockType == 'ul') {
-                  if (!inList || listType != 'ul') {
-                    if (inList) buffer.write('</$listType>');
-                    buffer.write('<ul>');
-                    inList = true;
-                    listType = 'ul';
-                  }
-                  buffer.write('<li>$currentBlock</li>');
-                } else if (blockType == 'ol') {
-                  if (!inList || listType != 'ol') {
-                    if (inList) buffer.write('</$listType>');
-                    buffer.write('<ol>');
-                    inList = true;
-                    listType = 'ol';
-                  }
-                  buffer.write('<li>$currentBlock</li>');
-                } else if (blockType == 'quote') {
-                  if (inList) {
-                    buffer.write('</$listType>');
-                    inList = false;
-                  }
-                  buffer.write('<blockquote>$currentBlock</blockquote>');
-                } else if (blockType == 'code') {
-                  if (inList) {
-                    buffer.write('</$listType>');
-                    inList = false;
-                  }
-                  buffer.write('<pre><code>$currentBlock</code></pre>');
-                } else if (heading != null) {
-                  if (inList) {
-                    buffer.write('</$listType>');
-                    inList = false;
-                  }
-                  buffer.write('<h$heading>$currentBlock</h$heading>');
-                } else {
-                  if (inList) {
-                    buffer.write('</$listType>');
-                    inList = false;
-                  }
-                  if (currentBlock.isNotEmpty) {
-                    buffer.write('<p>$currentBlock</p>');
-                  }
-                }
-
-                currentBlock = '';
-              }
+      final lines = _lines(document.toDelta());
+      while (lines.isNotEmpty &&
+          lines.last.html.isEmpty &&
+          !lines.last.embed &&
+          lines.last.attributes.isEmpty) {
+        lines.removeLast();
+      }
+      if (lines.isEmpty) return '';
+      final out = StringBuffer();
+      var i = 0;
+      while (i < lines.length) {
+        final block = lines[i].attributes['block'];
+        if (block == 'ul' || block == 'ol') {
+          out.write('<$block>');
+          while (i < lines.length && lines[i].attributes['block'] == block) {
+            final line = lines[i++];
+            // Une puce vide (retour à la ligne en fin de liste) n'est pas
+            // un élément.
+            if (line.html.isNotEmpty) {
+              out.write('<li${_alignStyle(line.attributes)}>${line.html}</li>');
             }
           }
+          out.write('</$block>');
+          continue;
         }
-      }
-
-      // Close any open list
-      if (inList && listType != null) {
-        buffer.write('</$listType>');
-      }
-
-      // Handle any remaining content
-      if (currentBlock.isNotEmpty) {
-        buffer.write('<p>$currentBlock</p>');
-      }
-
-      final result = buffer.toString();
-      return result.isEmpty ? '<p></p>' : result;
-    } catch (e) {
-      debugPrint('[DELTA_HTML] Error in deltaToHtml: ${e.runtimeType}');
-      debugPrint('[DELTA_HTML] StackTrace redacted');
-      return '<p></p>'; // Return empty paragraph on error
-    }
-  }
-
-  /// Convert HTML string from WordPress to Delta document
-  /// Preserves formatting: headings, bold, italic, underline, lists
-  static ParchmentDocument htmlToDelta(String html) {
-    if (html.isEmpty) {
-      return ParchmentDocument();
-    }
-
-    try {
-      final delta = Delta();
-
-      // Parse HTML into structured blocks. Gemini can return plain text, so
-      // fall back to paragraphs when no supported HTML tags are present.
-      var blocks = _parseHtmlBlocks(html);
-      if (blocks.isEmpty) {
-        blocks = _parsePlainTextBlocks(html);
-      }
-
-      for (final block in blocks) {
-        if (block['type'] == 'image') {
-          // Add image embed (carry optional display width)
-          final embed = <String, dynamic>{
-            '_type': 'image',
-            '_inline': false,
-            'source': block['src'],
-          };
-          if (block['width'] != null) {
-            embed['width'] = block['width'];
+        if (block == 'quote') {
+          out.write('<blockquote>');
+          while (i < lines.length && lines[i].attributes['block'] == 'quote') {
+            final line = lines[i++];
+            if (line.html.isNotEmpty) out.write('<p>${line.html}</p>');
           }
-          delta.push(Operation.insert(embed));
-          delta.push(Operation.insert('\n'));
-        } else {
-          // Add text with formatting
-          final text = block['text'] as String;
-          final attributes = block['attributes'] as Map<String, dynamic>?;
-
-          if (text.isNotEmpty) {
-            if (attributes != null && attributes.isNotEmpty) {
-              delta.push(Operation.insert(text, attributes));
-            } else {
-              delta.push(Operation.insert(text));
-            }
-            delta.push(Operation.insert('\n', block['blockAttributes']));
-          }
+          out.write('</blockquote>');
+          continue;
         }
+        out.write(_renderLine(lines[i++]));
       }
-
-      // Ensure document ends with newline
-      if (delta.isEmpty) {
-        delta.push(Operation.insert('\n'));
-      }
-
-      debugPrint(
-        '📝 Built Delta with ${delta.length} operations (formatting preserved)',
-      );
-      return ParchmentDocument.fromDelta(delta);
+      return out.toString();
     } catch (e) {
-      debugPrint('[DELTA_HTML] Error in htmlToDelta: ${e.runtimeType}');
-      debugPrint('[DELTA_HTML] StackTrace redacted');
-      return ParchmentDocument();
-    }
-  }
-
-  /// Parse HTML into structured blocks with formatting
-  static List<Map<String, dynamic>> _parseHtmlBlocks(String html) {
-    final blocks = <Map<String, dynamic>>[];
-
-    // Extract images and replace with markers
-    final imageRegex = RegExp(
-      r'<img[^>]+src="([^"]+)"[^>]*>',
-      caseSensitive: false,
-    );
-    final images = <Map<String, dynamic>>[];
-    html = html.replaceAllMapped(imageRegex, (match) {
-      final tag = match.group(0) ?? '';
-      final src = match.group(1) ?? '';
-      if (src.isNotEmpty) {
-        final wMatch = RegExp(
-          r'width\s*:\s*(\d+)\s*%',
-          caseSensitive: false,
-        ).firstMatch(tag);
-        images.add({
-          'src': src,
-          'width': wMatch != null ? int.tryParse(wMatch.group(1)!) : null,
-        });
-        return '{{IMG_${images.length - 1}}}';
-      }
+      debugPrint('Error converting Delta to HTML: $e');
       return '';
-    });
-
-    debugPrint('🖼️ Extracted ${images.length} images from HTML');
-
-    // Parse all elements in document order
-    final elementRegex = RegExp(
-      r'<(h[1-6]|p|div)(?:\s[^>]*)?>(.+?)</\1>|<(ul|ol)[^>]*>(.*?)</\3>|{{IMG_(\d+)}}',
-      caseSensitive: false,
-      dotAll: true,
-    );
-
-    for (final match in elementRegex.allMatches(html)) {
-      final blockTag = match.group(1)?.toLowerCase();
-      final blockContent = match.group(2);
-      final listTag = match.group(3)?.toLowerCase();
-      final listContent = match.group(4);
-      final imageIndex = match.group(5);
-
-      if (imageIndex != null) {
-        // Image block (standalone)
-        final idx = int.tryParse(imageIndex);
-        if (idx != null && idx < images.length) {
-          blocks.add({
-            'type': 'image',
-            'src': images[idx]['src'],
-            'width': images[idx]['width'],
-          });
-        }
-      } else if (listTag != null && listContent != null) {
-        // List block - parse list items
-        final liRegex = RegExp(
-          r'<li[^>]*>(.*?)</li>',
-          caseSensitive: false,
-          dotAll: true,
-        );
-
-        for (final liMatch in liRegex.allMatches(listContent)) {
-          final content = liMatch.group(1) ?? '';
-          if (content.trim().isEmpty) continue; // Skip empty list items
-
-          // Check if list item contains image markers and split content
-          final parts = _splitContentWithImages(content, images);
-
-          for (final part in parts) {
-            if (part['type'] == 'image') {
-              blocks.add(part);
-            } else {
-              final text = _extractTextWithInlineFormatting(
-                part['content'] as String,
-              );
-              if ((text['text'] as String).isNotEmpty) {
-                blocks.add({
-                  'type': 'text',
-                  'text': text['text'],
-                  'attributes': text['attributes'],
-                  'blockAttributes': {'block': listTag}, // 'ul' or 'ol'
-                });
-              }
-            }
-          }
-        }
-      } else if (blockTag != null && blockContent != null) {
-        // Regular block (heading, paragraph, div)
-        // Check if block contains image markers and split content
-        final parts = _splitContentWithImages(blockContent, images);
-
-        for (final part in parts) {
-          if (part['type'] == 'image') {
-            blocks.add(part);
-          } else {
-            final content = part['content'] as String;
-            if (content.trim().isEmpty) continue; // Skip empty blocks
-
-            final text = _extractTextWithInlineFormatting(content);
-            if ((text['text'] as String).isEmpty) continue;
-
-            final blockAttributes = <String, dynamic>{};
-
-            // Handle headings
-            if (blockTag.startsWith('h')) {
-              final level = int.tryParse(blockTag.substring(1));
-              if (level != null) {
-                blockAttributes['heading'] = level;
-              }
-            }
-
-            blocks.add({
-              'type': 'text',
-              'text': text['text'],
-              'attributes': text['attributes'],
-              'blockAttributes': blockAttributes.isNotEmpty
-                  ? blockAttributes
-                  : null,
-            });
-          }
-        }
-      }
     }
-
-    return blocks;
   }
 
-  static List<Map<String, dynamic>> _parsePlainTextBlocks(String value) {
-    final text = _stripHtmlTags(value).trim();
-    if (text.isEmpty) return const [];
-
-    final paragraphs = text
-        .split(RegExp(r'\n\s*\n+'))
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty);
-
-    return paragraphs
-        .map(
-          (paragraph) => <String, dynamic>{
-            'type': 'text',
-            'text': paragraph.replaceAll(RegExp(r'\s*\n\s*'), ' '),
-            'attributes': null,
-            'blockAttributes': null,
-          },
-        )
-        .toList();
+  /// HTML → document de l'éditeur, par un VRAI analyseur (paquet `html`),
+  /// plus d'expressions régulières : le gras d'un seul mot reste sur ce mot
+  /// (avant, tout le paragraphe passait en gras), les listes, titres,
+  /// citations et images se relisent tels qu'ils ont été écrits.
+  static ParchmentDocument htmlToDelta(String html) {
+    try {
+      var source = html.trim();
+      if (source.isEmpty) return ParchmentDocument();
+      if (!source.contains('<')) {
+        // Texte brut : un paragraphe par bloc séparé d'une ligne vide.
+        source = source
+            .split(RegExp(r'\n\s*\n'))
+            .where((p) => p.trim().isNotEmpty)
+            .map((p) => '<p>${_escape(p.trim()).replaceAll('\n', '<br>')}</p>')
+            .join();
+      }
+      final out = _DeltaBuilder();
+      for (final node in html_parser.parseFragment(source).nodes) {
+        _block(out, node);
+      }
+      if (out.delta.isEmpty) out.newline(const {});
+      final last = out.delta.last;
+      if (last.data is! String || !(last.data as String).endsWith('\n')) {
+        out.newline(const {});
+      }
+      return ParchmentDocument.fromDelta(out.delta);
+    } catch (e) {
+      debugPrint('Error converting HTML to Delta: $e');
+      final plain = html_parser.parseFragment(html).text ?? '';
+      return ParchmentDocument.fromDelta(Delta()..insert('${plain.trim()}\n'));
+    }
   }
 
-  static String _stripHtmlTags(String value) {
-    return value
-        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
-        .replaceAll(RegExp(r'</p\s*>', caseSensitive: false), '\n\n')
-        .replaceAll(RegExp(r'<[^>]+>'), '')
-        .replaceAll('&nbsp;', ' ')
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'");
-  }
+  // --- HTML → document ------------------------------------------------------
 
-  /// Split content that may contain image markers into separate parts
-  static List<Map<String, dynamic>> _splitContentWithImages(
-    String content,
-    List<Map<String, dynamic>> images,
-  ) {
-    final parts = <Map<String, dynamic>>[];
-    final imgMarkerRegex = RegExp(r'\{\{IMG_(\d+)\}\}');
+  static const _blockTags = {
+    'p',
+    'div',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'ul',
+    'ol',
+    'blockquote',
+    'pre',
+    'hr',
+    'table',
+  };
 
-    int lastEnd = 0;
-    for (final match in imgMarkerRegex.allMatches(content)) {
-      // Add text before the image marker
-      if (match.start > lastEnd) {
-        final textBefore = content.substring(lastEnd, match.start);
-        if (textBefore.trim().isNotEmpty) {
-          parts.add({'type': 'text', 'content': textBefore});
-        }
-      }
+  static bool _isBlock(dom.Element e) => _blockTags.contains(e.localName);
 
-      // Add the image
-      final idx = int.tryParse(match.group(1) ?? '');
-      if (idx != null && idx < images.length) {
-        parts.add({
-          'type': 'image',
-          'src': images[idx]['src'],
-          'width': images[idx]['width'],
-        });
-      }
+  static String? _alignOf(dom.Element e) => RegExp(
+    r'text-align\s*:\s*(center|right|justify)',
+  ).firstMatch((e.attributes['style'] ?? '').toLowerCase())?.group(1);
 
-      lastEnd = match.end;
-    }
-
-    // Add remaining text after last image marker
-    if (lastEnd < content.length) {
-      final textAfter = content.substring(lastEnd);
-      if (textAfter.trim().isNotEmpty) {
-        parts.add({'type': 'text', 'content': textAfter});
-      }
-    }
-
-    // If no image markers found, return the whole content as text
-    if (parts.isEmpty && content.trim().isNotEmpty) {
-      parts.add({'type': 'text', 'content': content});
-    }
-
-    return parts;
-  }
-
-  /// Extract text with inline formatting (bold, italic, underline)
-  static Map<String, dynamic> _extractTextWithInlineFormatting(String html) {
-    // For now, extract plain text and detect if there's formatting
-    // A full implementation would preserve inline styles per character
-    String text = html;
-    final attributes = <String, dynamic>{};
-
-    // Check for bold
-    if (RegExp(r'<(strong|b)>', caseSensitive: false).hasMatch(html)) {
-      attributes['b'] = true;
-    }
-
-    // Check for italic
-    if (RegExp(r'<(em|i)>', caseSensitive: false).hasMatch(html)) {
-      attributes['i'] = true;
-    }
-
-    // Check for underline
-    if (RegExp(r'<u>', caseSensitive: false).hasMatch(html)) {
-      attributes['u'] = true;
-    }
-
-    // Check for strikethrough (symmetric with deltaToHtml's attributes['s'])
-    if (RegExp(r'<(s|strike|del)>', caseSensitive: false).hasMatch(html)) {
-      attributes['s'] = true;
-    }
-
-    // Remove all HTML tags
-    text = text.replaceAll(RegExp(r'<[^>]+>'), '');
-
-    // Decode HTML entities
-    text = _decodeHtmlEntities(text);
-
-    // Trim whitespace
-    text = text.trim();
-
+  static Map<String, dynamic> _styleOf(dom.Element e) {
+    final style = (e.attributes['style'] ?? '').toLowerCase();
     return {
-      'text': text,
-      'attributes': attributes.isNotEmpty ? attributes : null,
+      if (RegExp(r'font-weight\s*:\s*(bold|[6-9]00)').hasMatch(style))
+        'b': true,
+      if (RegExp(r'font-style\s*:\s*italic').hasMatch(style)) 'i': true,
+      if (style.contains('underline')) 'u': true,
+      if (style.contains('line-through')) 's': true,
     };
   }
 
-  /// Decode common HTML entities
-  static String _decodeHtmlEntities(String text) {
-    return text
-        .replaceAll('&amp;', '&')
-        .replaceAll('&lt;', '<')
-        .replaceAll('&gt;', '>')
-        .replaceAll('&quot;', '"')
-        .replaceAll('&#39;', "'")
-        .replaceAll('&nbsp;', ' ');
+  static int? _imageWidth(dom.Element img) {
+    final match = RegExp(
+      r'width\s*:\s*(\d+)\s*%',
+    ).firstMatch(img.attributes['style'] ?? '');
+    final width = match == null ? null : int.tryParse(match.group(1)!);
+    return width != null && width > 0 && width <= 100 ? width : null;
+  }
+
+  static void _inline(
+    _DeltaBuilder out,
+    dom.Node node,
+    Map<String, dynamic> attributes,
+    Map<String, dynamic> line,
+  ) {
+    if (node is dom.Text) {
+      out.text(node.text.replaceAll(RegExp(r'\s+'), ' '), attributes);
+      return;
+    }
+    if (node is! dom.Element) return;
+    final tag = node.localName;
+    if (tag == 'br') {
+      out.newline(line);
+      return;
+    }
+    if (tag == 'img') {
+      final src = node.attributes['src'];
+      if (src != null && src.isNotEmpty) out.image(src, _imageWidth(node));
+      return;
+    }
+    final next = {...attributes, ..._styleOf(node)};
+    switch (tag) {
+      case 'strong' || 'b':
+        next['b'] = true;
+      case 'em' || 'i':
+        next['i'] = true;
+      case 'u':
+        next['u'] = true;
+      case 's' || 'strike' || 'del':
+        next['s'] = true;
+      case 'a':
+        final href = node.attributes['href'];
+        if (href != null && href.isNotEmpty) next['a'] = href;
+    }
+    for (final child in node.nodes) {
+      _inline(out, child, next, line);
+    }
+  }
+
+  static void _list(_DeltaBuilder out, dom.Element list) {
+    final type = list.localName == 'ol' ? 'ol' : 'ul';
+    for (final item in list.children.where((e) => e.localName == 'li')) {
+      final line = {'block': type, 'alignment': ?_alignOf(item)};
+      final nested = <dom.Element>[];
+      for (final child in item.nodes) {
+        if (child is dom.Element &&
+            (child.localName == 'ul' || child.localName == 'ol')) {
+          nested.add(child);
+        } else if (child is dom.Element && child.localName == 'p') {
+          for (final inner in child.nodes) {
+            _inline(out, inner, const {}, line);
+          }
+        } else {
+          _inline(out, child, const {}, line);
+        }
+      }
+      if (out.lineHasContent) out.newline(line);
+      // L'éditeur n'imbrique pas : une sous-liste suit à plat.
+      for (final sub in nested) {
+        _list(out, sub);
+      }
+    }
+  }
+
+  static void _block(_DeltaBuilder out, dom.Node node, {bool quote = false}) {
+    if (node is dom.Text) {
+      final text = node.text.trim();
+      if (text.isEmpty) return;
+      out.text(text, const {});
+      out.newline({if (quote) 'block': 'quote'});
+      return;
+    }
+    if (node is! dom.Element) return;
+    final tag = node.localName ?? '';
+    Map<String, dynamic> line(Map<String, dynamic> base) => {
+      ...base,
+      'alignment': ?_alignOf(node),
+      if (quote) 'block': 'quote',
+    };
+    switch (tag) {
+      case 'p' || 'div' || 'pre':
+        if (node.children.any(_isBlock)) {
+          for (final child in node.nodes) {
+            _block(out, child, quote: quote);
+          }
+          return;
+        }
+        final attributes = line(const {});
+        for (final child in node.nodes) {
+          _inline(out, child, const {}, attributes);
+        }
+        if (out.lineHasContent || !out.justClosedEmbed) {
+          out.newline(attributes);
+        }
+      case 'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6':
+        final attributes = line({'heading': int.parse(tag.substring(1))});
+        for (final child in node.nodes) {
+          _inline(out, child, const {}, attributes);
+        }
+        // Un titre vide n'est pas un titre.
+        if (out.lineHasContent) out.newline(attributes);
+      case 'ul' || 'ol':
+        _list(out, node);
+      case 'blockquote':
+        if (node.children.any(_isBlock)) {
+          for (final child in node.nodes) {
+            _block(out, child, quote: true);
+          }
+        } else {
+          const attributes = {'block': 'quote'};
+          for (final child in node.nodes) {
+            _inline(out, child, const {}, attributes);
+          }
+          if (out.lineHasContent) out.newline(attributes);
+        }
+      case 'img':
+        _inline(out, node, const {}, const {});
+      case 'hr':
+        return;
+      default:
+        final attributes = line(const {});
+        _inline(out, node, const {}, attributes);
+        if (out.lineHasContent) out.newline(attributes);
+    }
+  }
+
+  // --- document → HTML ------------------------------------------------------
+
+  static String _escape(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+
+  static String _inlineHtml(String text, Map<String, dynamic>? attributes) {
+    var out = _escape(text);
+    final a = attributes ?? const {};
+    if (a['s'] == true) out = '<s>$out</s>';
+    if (a['u'] == true) out = '<u>$out</u>';
+    if (a['i'] == true) out = '<em>$out</em>';
+    if (a['b'] == true) out = '<strong>$out</strong>';
+    final link = a['a'];
+    if (link is String && link.isNotEmpty) {
+      out = '<a href="${_escape(link)}">$out</a>';
+    }
+    return out;
+  }
+
+  /// L'image d'une opération, quel que soit le format (Parchment `_type`,
+  /// ou ancien `{image: …}`).
+  static (String, int?)? _imageOf(Map data) {
+    String? src;
+    if (data['_type'] == 'image' || data.containsKey('source')) {
+      src = data['source']?.toString();
+    } else if (data['image'] is String) {
+      src = data['image'] as String;
+    } else if (data['image'] is Map) {
+      src = (data['image'] as Map)['source']?.toString();
+    }
+    if (src == null || src.isEmpty) return null;
+    final raw = data['width'];
+    final width = raw is num ? raw.toInt() : int.tryParse('${raw ?? ''}');
+    return (src, width != null && width > 0 && width <= 100 ? width : null);
+  }
+
+  static List<_Line> _lines(Delta delta) {
+    final lines = <_Line>[];
+    final buffer = StringBuffer();
+    var embed = false;
+    for (final op in delta.toList()) {
+      final data = op.data;
+      if (data is Map) {
+        final image = _imageOf(data);
+        if (image != null) {
+          final (src, width) = image;
+          buffer.write(
+            width == null
+                ? '<img src="${_escape(src)}" alt="" />'
+                : '<img src="${_escape(src)}" alt="" style="width:$width%" />',
+          );
+          embed = true;
+        }
+        continue;
+      }
+      final parts = data.toString().split('\n');
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].isNotEmpty) {
+          buffer.write(_inlineHtml(parts[i], op.attributes));
+        }
+        if (i < parts.length - 1) {
+          lines.add(
+            _Line(
+              buffer.toString(),
+              Map<String, dynamic>.from(op.attributes ?? const {}),
+              embed: embed,
+            ),
+          );
+          buffer.clear();
+          embed = false;
+        }
+      }
+    }
+    if (buffer.isNotEmpty) {
+      lines.add(_Line(buffer.toString(), const {}, embed: embed));
+    }
+    return lines;
+  }
+
+  static String _alignStyle(Map<String, dynamic> attributes) {
+    final align = attributes['alignment'];
+    return align is String && align != 'left'
+        ? ' style="text-align: $align;"'
+        : '';
+  }
+
+  static String _renderLine(_Line line) {
+    final heading = (line.attributes['heading'] as num?)?.toInt();
+    if (heading != null) {
+      if (line.html.isEmpty) return '';
+      return '<h$heading${_alignStyle(line.attributes)}>${line.html}</h$heading>';
+    }
+    if (line.embed && line.attributes['alignment'] == null) return line.html;
+    // Une ligne vide garde sa place (espace voulu entre deux paragraphes).
+    if (line.html.isEmpty) return '<p><br></p>';
+    return '<p${_alignStyle(line.attributes)}>${line.html}</p>';
+  }
+}
+
+class _Line {
+  _Line(this.html, this.attributes, {this.embed = false});
+
+  final String html;
+  final Map<String, dynamic> attributes;
+  final bool embed;
+}
+
+/// Construit le document ligne par ligne.
+class _DeltaBuilder {
+  final delta = Delta();
+  bool _lineHasContent = false;
+
+  /// Vrai juste après une image : sa ligne est déjà fermée.
+  bool justClosedEmbed = false;
+
+  bool get lineHasContent => _lineHasContent;
+
+  void text(String value, Map<String, dynamic> attributes) {
+    if (value.isEmpty) return;
+    // Pas d'espace en début de ligne (indentation du HTML source).
+    final text = _lineHasContent ? value : value.trimLeft();
+    if (text.isEmpty) return;
+    delta.insert(text, attributes.isEmpty ? null : Map.of(attributes));
+    _lineHasContent = true;
+    justClosedEmbed = false;
+  }
+
+  void image(String src, int? width) {
+    if (_lineHasContent) newline(const {});
+    delta.insert(
+      BlockEmbed('image', data: {'source': src, 'width': ?width}).toJson(),
+    );
+    newline(const {});
+    justClosedEmbed = true;
+  }
+
+  void newline(Map<String, dynamic> attributes) {
+    delta.insert('\n', attributes.isEmpty ? null : Map.of(attributes));
+    _lineHasContent = false;
+    justClosedEmbed = false;
   }
 }
