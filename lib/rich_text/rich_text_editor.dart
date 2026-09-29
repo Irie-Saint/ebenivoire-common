@@ -64,12 +64,14 @@ class _Palette {
     text = style.text ?? scheme.onSurface;
     muted = style.muted ?? scheme.onSurfaceVariant;
     danger = style.danger ?? scheme.error;
+    fontSize = style.fontSize;
     toolbar =
         style.toolbarSurface ??
         Color.alphaBlend(text.withValues(alpha: .035), surface);
   }
 
   late final Color accent, border, surface, text, muted, danger, toolbar;
+  late final double fontSize;
 }
 
 /// Éditeur de texte riche (repris de `GestionRichTextField` d'AEECI, D062).
@@ -410,7 +412,10 @@ class _RichTextEditorState extends State<RichTextEditor> {
               const SizedBox(width: 8),
               Text(
                 richTextTr('rich_text.image_uploading'),
-                style: TextStyle(fontSize: 12, color: palette.muted),
+                style: TextStyle(
+                  fontSize: palette.fontSize - 2,
+                  color: palette.muted,
+                ),
               ),
             ],
           ),
@@ -420,7 +425,7 @@ class _RichTextEditorState extends State<RichTextEditor> {
           Text(
             note,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: palette.fontSize - 2,
               height: 1.35,
               color: error != null ? palette.danger : palette.muted,
               fontWeight: error != null ? FontWeight.w500 : null,
@@ -471,10 +476,7 @@ class _RichTextEditorState extends State<RichTextEditor> {
         color: palette.toolbar,
         border: Border(bottom: BorderSide(color: palette.border)),
       ),
-      child: Wrap(
-        spacing: 2,
-        runSpacing: 2,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      child: _ToolbarLayout(
         children: [
           toggle('bold', Attribute.bold, icon: Icons.format_bold_rounded),
           toggle('italic', Attribute.italic, icon: Icons.format_italic_rounded),
@@ -581,6 +583,36 @@ class _RichTextEditorState extends State<RichTextEditor> {
       ),
     );
   }
+}
+
+/// Barre d'outils : sur plusieurs lignes quand la place le permet ; sur un
+/// téléphone, une seule ligne qui défile de côté (sinon quatre lignes
+/// mangent la moitié de l'éditeur).
+class _ToolbarLayout extends StatelessWidget {
+  const _ToolbarLayout({required this.children});
+
+  final List<Widget> children;
+
+  static const narrow = 420.0;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < narrow) {
+        return SingleChildScrollView(
+          key: const Key('rich-toolbar-scroll'),
+          scrollDirection: Axis.horizontal,
+          child: Row(children: children),
+        );
+      }
+      return Wrap(
+        spacing: 2,
+        runSpacing: 2,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: children,
+      );
+    },
+  );
 }
 
 class _ToolButton extends StatelessWidget {
@@ -915,7 +947,7 @@ class _TableEmbedBuilder extends EmbedBuilder {
                           child: Text(
                             cell.isEmpty ? ' ' : cell,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: palette.fontSize,
                               color: palette.text,
                               fontWeight: data.header && r == 0
                                   ? FontWeight.w700
@@ -971,7 +1003,10 @@ class _HtmlEmbedBuilder extends EmbedBuilder {
           Expanded(
             child: Text(
               richTextTr('rich_text.kept.suffix', {'kind': richTextTr(kind)}),
-              style: TextStyle(fontSize: 12, color: palette.muted),
+              style: TextStyle(
+                fontSize: palette.fontSize - 2,
+                color: palette.muted,
+              ),
             ),
           ),
           if (!embedContext.readOnly)
@@ -1284,9 +1319,10 @@ DefaultStyles _styles(
       noLine,
       null,
     ),
-    h2: heading(22),
-    h3: heading(18),
-    h4: heading(16),
+    // 22 / 18 / 16 pour un texte à 14, en proportion sinon.
+    h2: heading(style.fontSize * 22 / 14),
+    h3: heading(style.fontSize * 18 / 14),
+    h4: heading(style.fontSize * 16 / 14),
     lists: DefaultListBlockStyle(
       base,
       none,
