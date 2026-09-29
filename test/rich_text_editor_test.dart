@@ -141,6 +141,37 @@ void main() {
     expect(find.textContaining('Après', findRichText: true), findsOneWidget);
   });
 
+  testWidgets('le HTML nettoyé par le serveur (même contenu) ne recharge '
+      'pas le document : l’historique d’annulation reste', (tester) async {
+    final value = ValueNotifier('<p style="text-align: center;">Texte</p>');
+    await tester.pumpWidget(
+      _app(
+        ValueListenableBuilder(
+          valueListenable: value,
+          builder: (_, html, _) => RichTextEditor(
+            value: html,
+            onChanged: (next) => value.value = next,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Ligne de séparation'));
+    await tester.pumpAndSettle();
+    expect(value.value, contains('<hr />'));
+
+    // Réécrit comme le fait le nettoyage du serveur, même contenu.
+    value.value = value.value
+        .replaceAll('text-align: center;', 'text-align:center')
+        .replaceAll('<hr />', '<hr>');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Annuler'));
+    await tester.pumpAndSettle();
+    expect(value.value, isNot(contains('<hr')));
+    expect(value.value, contains('Texte'));
+  });
+
   test('liste blanche des liens', () {
     expect(RichTextLinks.parse('https://ebenivoire.ci/a'), isNotNull);
     expect(RichTextLinks.parse('mailto:contact@ebenivoire.ci'), isNotNull);

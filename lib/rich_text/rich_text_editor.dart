@@ -167,7 +167,15 @@ class _RichTextEditorState extends State<RichTextEditor> {
     _controller.readOnly = !widget.enabled;
     if (widget.value != _lastHtml && widget.value != oldWidget.value) {
       _lastHtml = widget.value;
-      _controller.document = Document.fromDelta(_deltaOf(widget.value));
+      final incoming = _deltaOf(widget.value);
+      // Même contenu écrit autrement (HTML nettoyé renvoyé par le serveur
+      // après un enregistrement) : on garde le document, donc le curseur
+      // et l'historique d'annulation.
+      if (richDeltaToHtml(incoming) ==
+          richDeltaToHtml(_controller.document.toDelta())) {
+        return;
+      }
+      _controller.document = Document.fromDelta(incoming);
       _listen();
     }
   }
@@ -817,6 +825,9 @@ class _ImageEmbedBuilder extends EmbedBuilder {
   Future<void> _menu(BuildContext context, int offset, int current) async {
     final choice = await showModalBottomSheet<int>(
       context: context,
+      // Tablette / ordinateur : une feuille à largeur de lecture, pas
+      // étirée d'un bord à l'autre.
+      constraints: const BoxConstraints(maxWidth: 560),
       useSafeArea: true,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -1036,6 +1047,7 @@ Future<RichTableData?> _showTableEditor(
 ) {
   return showModalBottomSheet<RichTableData>(
     context: context,
+    constraints: const BoxConstraints(maxWidth: 720),
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: colors.surface,
