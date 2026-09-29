@@ -36,8 +36,10 @@ class HttpException implements Exception {
 /// numéro de pièce déjà pris s'affichait « Pas de connexion »).
 bool isNoServerAnswer(Object error) {
   if (error is HttpException) return error.noAnswer;
-  if (error is UnauthorizedException) return false;
-  return error is TimeoutException || error is! Error;
+  // Le client HTTP ramène coupures et sockets à HttpException(noAnswer) ;
+  // seul le délai dépassé arrive tel quel. Une autre exception (JSON
+  // illisible…) n'est PAS une coupure.
+  return error is TimeoutException;
 }
 
 class UnauthorizedException implements Exception {
