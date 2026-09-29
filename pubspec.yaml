@@ -2,7 +2,7 @@ name: ebenivoire_common
 description: >-
   Code Flutter commun aux apps EbenIvoire (cliente, vendeur, console) :
   un seul exemplaire, pour que les trois copies ne divergent plus.
-version: 0.12.2
+version: 0.13.0
 publish_to: none
 
 environment:
@@ -25,9 +25,14 @@ dependencies:
   flutter_screenutil: ^5.9.3
   flutter_secure_storage: ^10.0.0-beta.5
   get: ^4.7.3
+  # Texte riche (modèle AEECI) : éditeur Quill + lecteur HTML avec tableaux.
+  flutter_quill: ^11.6.0
+  flutter_html: ^3.0.0
+  flutter_html_table: ^3.0.0
   # Analyseur HTML du convertisseur de texte riche (déjà tiré par
-  # flutter_html dans les apps).
-  html: ^0.15.6
+  # flutter_html dans les apps). Pas de 0.15.7 : elle retire la fonction
+  # interne `matches` dont flutter_html 3.0.0 a besoin (ne compile plus).
+  html: ">=0.15.6 <0.15.7"
   http_parser: ^4.1.2
   image_picker: ^1.2.0
   in_app_review: ^2.0.10

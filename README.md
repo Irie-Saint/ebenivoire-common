@@ -33,6 +33,11 @@ copies qu'il fallait penser à modifier ensemble.
 | `greater_abidjan.dart` | Communes du Grand Abidjan (cliente et vendeur) |
 | `review_config.dart` | Réglages de la demande d'avis sur le store (cliente et vendeur) |
 | `delta_html_converter.dart` | Texte riche ↔ HTML, largeur des images comprise (vendeur et console) |
+| `rich_text/rich_text_editor.dart` | `RichTextEditor` : éditeur de texte riche Quill (repris d'AEECI) — barre complète, images (largeur en %), tableaux, liens filtrés ; la valeur est du HTML |
+| `rich_text/rich_html_view.dart` | `RichHtmlView` : lecteur du même HTML (images en plein écran, tableaux qui défilent, liens filtrés) |
+| `rich_text/rich_text_html.dart` | Convertisseur HTML ↔ Delta Quill de l'éditeur |
+| `rich_text/rich_text_links.dart` | Liste blanche des liens (http, https, mailto, tel) |
+| `rich_text/rich_text_messages.dart` | Clés `rich_text.*` (FR / EN) à déclarer dans les traductions de chaque app |
 | `app_lifecycle_service.dart` | Premier plan / arrière-plan (crochet `onAppResumed`) — vendeur et console |
 | `brand_colors.dart` | Palette de la marque (mêmes valeurs que les `AppColors` des trois apps) |
 | `app_skeleton.dart`, `app_loader.dart` | Squelettes de chargement et indicateurs (cliente et console) |
