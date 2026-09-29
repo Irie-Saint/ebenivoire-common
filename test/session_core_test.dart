@@ -648,4 +648,40 @@ void main() {
       expect(e.requiresReLogin, isFalse);
     });
   });
+
+  group('refus du serveur ≠ pas de connexion', () {
+    test('un 409 garde son message, son code et son champ', () async {
+      server.business = (_) => (
+        409,
+        {
+          'success': false,
+          'message': 'Ce numéro de document est déjà enregistré.',
+          'error_code': 'DOCUMENT_NUMBER_TAKEN',
+          'field': 'document_number',
+        },
+      );
+      final error = await api
+          .update(
+            endpoint: '/api/vendor/application/document',
+            data: const {},
+            type: RequestType.public,
+          )
+          .then<Object?>((_) => null, onError: (Object e) => e);
+      expect(error, isA<net.HttpException>());
+      final e = error! as net.HttpException;
+      expect(e.status, 409);
+      expect(e.message, 'Ce numéro de document est déjà enregistré.');
+      expect(e.errorCode, 'DOCUMENT_NUMBER_TAKEN');
+      expect(e.field, 'document_number');
+      expect(net.isNoServerAnswer(e), isFalse);
+    });
+
+    test('réseau coupé : « pas de réponse »', () async {
+      server.business = (_) => (0, const {});
+      final error = await api
+          .fetch(endpoint: '/api/orders', type: RequestType.public)
+          .then<Object?>((_) => null, onError: (Object e) => e);
+      expect(net.isNoServerAnswer(error!), isTrue);
+    });
+  });
 }

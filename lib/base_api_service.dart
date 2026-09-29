@@ -315,6 +315,7 @@ abstract class BaseApiService {
         'core_session.unreachable'.tr,
         503,
         errorCode: 'REFRESH_UNAVAILABLE',
+        noAnswer: true,
       );
     }
     throw net.UnauthorizedException(
@@ -371,6 +372,7 @@ abstract class BaseApiService {
           'core_session.unreachable'.tr,
           503,
           errorCode: 'REFRESH_UNAVAILABLE',
+          noAnswer: true,
         );
       }
       // Refus explicite : le renouvellement a déjà fermé la session.
@@ -383,12 +385,20 @@ abstract class BaseApiService {
         throw TimeoutException('Request timed out');
       }
       if (e.type == DioExceptionType.connectionError) {
-        throw net.HttpException('No internet connection', 503);
+        throw net.HttpException('No internet connection', 503, noAnswer: true);
       }
       final statusCode = e.response?.statusCode ?? 500;
+      final data = e.response?.data;
       throw _mapStatusCodeToException(
         statusCode,
-        e.response?.statusMessage ?? e.message ?? 'Unknown error',
+        _extractErrorMessage(data) ??
+            e.response?.statusMessage ??
+            e.message ??
+            'Unknown error',
+        errorCode: _extractErrorCode(data),
+        payload: _extractErrorPayload(data),
+        // Aucune réponse du tout : pas un refus du serveur.
+        noAnswer: e.response == null,
       );
     }
   }
@@ -417,6 +427,8 @@ abstract class BaseApiService {
     int statusCode,
     String message, {
     String? errorCode,
+    Map<String, dynamic>? payload,
+    bool noAnswer = false,
   }) {
     switch (statusCode) {
       case 503:
@@ -424,15 +436,25 @@ abstract class BaseApiService {
           'Service unavailable: $message',
           503,
           errorCode: errorCode,
+          payload: payload,
+          noAnswer: noAnswer,
         );
       case 504:
         return net.HttpException(
           'Gateway timeout: $message',
           504,
           errorCode: errorCode,
+          payload: payload,
+          noAnswer: noAnswer,
         );
       default:
-        return net.HttpException(message, statusCode, errorCode: errorCode);
+        return net.HttpException(
+          message,
+          statusCode,
+          errorCode: errorCode,
+          payload: payload,
+          noAnswer: noAnswer,
+        );
     }
   }
 
@@ -473,7 +495,12 @@ abstract class BaseApiService {
       if (status == 403 && type != RequestType.public) {
         onForbidden(_extractErrorPayload(response.data), type);
       }
-      throw _mapStatusCodeToException(status, message, errorCode: code);
+      throw _mapStatusCodeToException(
+        status,
+        message,
+        errorCode: code,
+        payload: _extractErrorPayload(response.data),
+      );
     }
   }
 
