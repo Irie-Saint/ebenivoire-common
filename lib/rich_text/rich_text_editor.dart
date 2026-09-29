@@ -91,6 +91,7 @@ class RichTextEditor extends StatefulWidget {
     this.minHeight = 180,
     this.maxHeight = 420,
     this.enabled = true,
+    this.hasError = false,
     super.key,
   });
 
@@ -105,6 +106,9 @@ class RichTextEditor extends StatefulWidget {
   final RichTextEditorStyle style;
   final double minHeight, maxHeight;
   final bool enabled;
+
+  /// Cadre en erreur, le message étant affiché par l'app (son propre style).
+  final bool hasError;
 
   @override
   State<RichTextEditor> createState() => _RichTextEditorState();
@@ -328,7 +332,8 @@ class _RichTextEditorState extends State<RichTextEditor> {
     final palette = _Palette(context, widget.style);
     final radius = BorderRadius.circular(widget.style.radius);
     final error = widget.errorText ?? _uploadError;
-    final borderColor = error != null
+    final invalid = error != null || widget.hasError;
+    final borderColor = invalid
         ? palette.danger
         : _focusNode.hasFocus
         ? palette.accent
@@ -344,7 +349,7 @@ class _RichTextEditorState extends State<RichTextEditor> {
             borderRadius: radius,
             border: Border.all(
               color: borderColor,
-              width: _focusNode.hasFocus || error != null ? 1.5 : 1,
+              width: _focusNode.hasFocus || invalid ? 1.5 : 1,
             ),
           ),
           child: ClipRRect(
