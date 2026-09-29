@@ -512,7 +512,7 @@ abstract class BaseApiService {
 
   // ==================== MÉTHODES ====================
 
-  Future<dynamic> fetch({
+  Future<Map<String, dynamic>> fetch({
     required String endpoint,
     Map<String, dynamic>? queryParameters,
     Map<String, String>? additionalHeaders,
@@ -571,7 +571,7 @@ abstract class BaseApiService {
   }
 
   /// POST : JSON, ou formulaire pour la connexion ([RequestType.loginAuth]).
-  Future<dynamic> create({
+  Future<Map<String, dynamic>> create({
     required String endpoint,
     required dynamic data,
     required RequestType type,
@@ -599,7 +599,7 @@ abstract class BaseApiService {
     return {'statusCode': response.statusCode, 'body': response.data};
   }
 
-  Future<dynamic> update({
+  Future<Map<String, dynamic>> update({
     required String endpoint,
     required dynamic data,
     Map<String, dynamic>? queryParameters,
@@ -626,7 +626,7 @@ abstract class BaseApiService {
     }
   }
 
-  Future<dynamic> patch({
+  Future<Map<String, dynamic>> patch({
     required String endpoint,
     required dynamic data,
     Map<String, dynamic>? queryParameters,
@@ -653,7 +653,7 @@ abstract class BaseApiService {
     }
   }
 
-  Future<dynamic> remove({
+  Future<Map<String, dynamic>> remove({
     required String endpoint,
     Map<String, dynamic>? queryParameters,
     dynamic data,
@@ -779,7 +779,7 @@ abstract class BaseApiService {
   ///
   /// Une erreur est rendue comme une réponse 500 (comportement historique
   /// des trois apps : les services lisent `statusCode`).
-  Future<dynamic> createMultipart({
+  Future<Map<String, dynamic>> createMultipart({
     required String endpoint,
     required Map<String, dynamic> data,
     required Map<String, dynamic> files,
@@ -823,7 +823,7 @@ abstract class BaseApiService {
   }
 
   /// PUT multipart : champs et fichiers facultatifs.
-  Future<dynamic> updateMultipart({
+  Future<Map<String, dynamic>> updateMultipart({
     required String endpoint,
     required Map<String, dynamic> data,
     Map<String, dynamic> files = const {},

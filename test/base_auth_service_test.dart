@@ -12,7 +12,7 @@ class _Api extends Fake implements BaseApiService {
   Map<String, dynamic>? sent;
 
   @override
-  Future<dynamic> create({
+  Future<Map<String, dynamic>> create({
     required String endpoint,
     required dynamic data,
     required RequestType type,
@@ -22,7 +22,7 @@ class _Api extends Fake implements BaseApiService {
     sent = Map<String, dynamic>.from(data as Map);
     final r = reply();
     if (r is Exception) throw r;
-    return r;
+    return Map<String, dynamic>.from(r as Map);
   }
 }
 
