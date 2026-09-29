@@ -12,6 +12,8 @@ const Map<String, Map<String, String>> sessionMessages = {
         'as the server answers again.',
     'core.error.something_went_wrong':
         'Something went wrong. Please try again.',
+    'core.error.no_connection':
+        'No connection. Check your network and try again.',
   },
   'fr': {
     'core_session.unreachable':
@@ -23,5 +25,7 @@ const Map<String, Map<String, String>> sessionMessages = {
         'Vérifiez votre connexion. La page se rechargera toute seule dès que '
         'le serveur répondra à nouveau.',
     'core.error.something_went_wrong': 'Une erreur est survenue. Réessayez.',
+    'core.error.no_connection':
+        'Pas de connexion. Vérifiez votre réseau et réessayez.',
   },
 };

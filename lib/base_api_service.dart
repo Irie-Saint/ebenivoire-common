@@ -341,7 +341,7 @@ abstract class BaseApiService {
       }
       final response = await _execute(request);
       if (response.data == null) {
-        throw net.HttpException('Server error', 500);
+        throw net.HttpException('core.error.something_went_wrong'.tr, 500);
       }
       return response;
     } on TimeoutException catch (e) {
@@ -363,7 +363,7 @@ abstract class BaseApiService {
         debugPrint('Token refreshed after 401, retrying request once');
         final retry = await _execute(request);
         if (retry.data == null) {
-          throw net.HttpException('Server error', 500);
+          throw net.HttpException('core.error.something_went_wrong'.tr, 500);
         }
         return retry;
       }
@@ -385,7 +385,12 @@ abstract class BaseApiService {
         throw TimeoutException('Request timed out');
       }
       if (e.type == DioExceptionType.connectionError) {
-        throw net.HttpException('No internet connection', 503, noAnswer: true);
+        // Texte lisible : certains écrans affichent e.message tel quel.
+        throw net.HttpException(
+          'core.error.no_connection'.tr,
+          503,
+          noAnswer: true,
+        );
       }
       final statusCode = e.response?.statusCode ?? 500;
       final data = e.response?.data;
@@ -430,19 +435,16 @@ abstract class BaseApiService {
     Map<String, dynamic>? payload,
     bool noAnswer = false,
   }) {
+    // 503/504 : le message du serveur s'il en a donné un (déjà en
+    // français) ; sinon « serveur injoignable », jamais le texte HTTP
+    // anglais ni un préfixe « Service unavailable: » à l'écran.
+    final spoke = payload != null || errorCode != null;
     switch (statusCode) {
       case 503:
-        return net.HttpException(
-          'Service unavailable: $message',
-          503,
-          errorCode: errorCode,
-          payload: payload,
-          noAnswer: noAnswer,
-        );
       case 504:
         return net.HttpException(
-          'Gateway timeout: $message',
-          504,
+          spoke ? message : 'core_session.unreachable'.tr,
+          statusCode,
           errorCode: errorCode,
           payload: payload,
           noAnswer: noAnswer,
