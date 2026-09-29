@@ -27,3 +27,32 @@ String userMessageOf(Object error, {required String fallback}) {
   }
   return fallback;
 }
+
+/// Le texte d'une erreur quelconque attrapée par un écran.
+///
+/// * refus / coupure du serveur : comme [userMessageOf] ;
+/// * `Exception('…')` d'un service : son texte, sans « Exception: » ;
+/// * erreur typée de l'app qui porte un `message` : ce message ;
+/// * bug (Error) ou autre : [fallback] (« Une erreur est survenue » par
+///   défaut), jamais le texte technique.
+String errorTextOf(Object error, {String? fallback}) {
+  final fb = fallback ?? 'core.error.something_went_wrong'.tr;
+  if (error is HttpException ||
+      error is UnauthorizedException ||
+      isNoServerAnswer(error)) {
+    return userMessageOf(error, fallback: fb);
+  }
+  if (error is Error) return fb;
+  final text = error.toString();
+  if (text.startsWith('Exception: ')) {
+    final message = text.substring('Exception: '.length).trim();
+    return message.isEmpty ? fb : message;
+  }
+  try {
+    final message = (error as dynamic).message;
+    if (message is String && message.trim().isNotEmpty) return message.trim();
+  } catch (_) {
+    // Pas de champ `message` : le texte générique.
+  }
+  return fb;
+}

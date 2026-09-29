@@ -48,4 +48,24 @@ void main() {
     );
     expect(isNoServerAnswer(const FormatException('bad json')), isFalse);
   });
+
+  test('errorTextOf : texte d’un service, message typé, jamais un bug', () {
+    expect(
+      errorTextOf(Exception('Adresse introuvable.')),
+      'Adresse introuvable.',
+    );
+    expect(errorTextOf(_Typed('Code expiré.')), 'Code expiré.');
+    expect(errorTextOf(HttpException('Déjà annulée.', 409)), 'Déjà annulée.');
+    expect(
+      errorTextOf(StateError('bug')),
+      'Une erreur est survenue. Réessayez.',
+    );
+  });
+}
+
+class _Typed implements Exception {
+  const _Typed(this.message);
+  final String message;
+  @override
+  String toString() => 'TypedError($message)';
 }

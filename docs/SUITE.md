@@ -29,6 +29,7 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 | 0.13.3 | (ce commit) | `net.HttpException` porte le corps de l'erreur (`payload`, `field`) et `noAnswer` ; `isNoServerAnswer(e)` sépare « le serveur n'a pas répondu » d'un refus (409, 404…). Un refus affiché « Pas de connexion » trompait (dossier vendeur : numéro de pièce déjà pris) |
 | 0.13.4 | (ce commit) | messages d'erreur réseau lisibles : « Pas de connexion… » (`core.error.no_connection`), « Une erreur est survenue » au lieu de « Server error » ; un 503/504 garde le message du serveur ou dit « serveur injoignable », plus de préfixe anglais « Service unavailable: » affiché |
 | 0.13.5 | (ce commit) | `userMessageOf(e, fallback:)` (`error_messages.dart`) : le message à montrer pour une erreur — celui du serveur pour un refus, « Pas de connexion » sans réponse, sinon celui de l'écran ; jamais le texte brut de l'exception. `isNoServerAnswer` resserré (délai ou `noAnswer` seulement). ⚠️ Ne plus détecter une coupure par `e.toString().contains('No internet')` : le texte est traduit depuis 0.13.4 |
+| 0.13.6 | (ce commit) | `errorTextOf(e)` : le texte d'une erreur quelconque pour un écran (refus / coupure comme `userMessageOf`, `Exception('…')` sans préfixe, `message` d'une erreur typée, jamais le texte d'un bug). Remplace `e.toString().replaceFirst('Exception: ', '')`, qui affichait « HttpException: … (Status: 409) » |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
