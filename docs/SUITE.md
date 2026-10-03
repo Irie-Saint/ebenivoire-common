@@ -4,16 +4,6 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 (app cliente `EbenIvoire`, app vendeur `EbenIvoire-Vendeur`, console
 `EbenIvoire-Admin`). À lire avant de reprendre.
 
-## En local — 02/10/2026, achat sur commande
-
-`lib/purchase_summary.dart` porte la promesse figée des lignes de commande
-(quantité différée, délai, pluriels), sans skin visuel. Utilisé par les trois apps.
-Analyse propre et trois tests réussis : compatibilité des anciens contrats,
-promesse conservée et singulier du délai/quantité. Pas encore publié : la version
-du paquet reste 0.13.8 et les apps de travail utilisent un override local.
-Publier le paquet et remplacer les refs git des apps au Go de publication,
-puis vérifier les apps successivement avant d'activer la capacité serveur.
-
 ## Fait (septembre 2026)
 
 | Version | Commit | Contenu |
@@ -42,6 +32,7 @@ puis vérifier les apps successivement avant d'activer la capacité serveur.
 | 0.13.6 | (ce commit) | `errorTextOf(e)` : le texte d'une erreur quelconque pour un écran (refus / coupure comme `userMessageOf`, `Exception('…')` sans préfixe, `message` d'une erreur typée, jamais le texte d'un bug). Remplace `e.toString().replaceFirst('Exception: ', '')`, qui affichait « HttpException: … (Status: 409) » |
 | 0.13.7 | (ce commit) | `RichTextEditor` accepte les menus image, lien et tableau fournis par chaque app : le vendeur peut utiliser ses feuilles du kit sans copier l'éditeur ; les menus Material restent le comportement par défaut des autres apps. Le lien renvoyé par un menu reste filtré par la liste blanche commune. |
 | 0.13.8 | (ce commit) | Les sept méthodes JSON de `BaseApiService` déclarent leur vrai résultat `Map<String, dynamic>` (`statusCode`, `body`) : l'analyse Dart repère une lecture erronée comme `response.statusCode`, qui faisait afficher une erreur après un envoi de document réussi. |
+| 0.13.9 | (ce commit) | `purchase_summary` : promesse figée des lignes de commande (quantité différée, délai, pluriels), sans habillage, lue par les trois apps ; publiée le 03/10 (elle n'existait qu'en local, les apps ne compilaient qu'avec l'override) |
 
 Les trois apps épinglent un **numéro de commit** (`ref:` dans `pubspec.yaml`),
 pas une étiquette : l'environnement de Claude ne peut pas pousser d'étiquettes.
