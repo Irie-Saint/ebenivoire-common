@@ -4,6 +4,16 @@ Mémoire du chantier « un seul exemplaire du code commun aux trois apps »
 (app cliente `EbenIvoire`, app vendeur `EbenIvoire-Vendeur`, console
 `EbenIvoire-Admin`). À lire avant de reprendre.
 
+## En local — 02/10/2026, achat sur commande
+
+`lib/purchase_summary.dart` porte la promesse figée des lignes de commande
+(quantité différée, délai, pluriels), sans skin visuel. Utilisé par les trois apps.
+Analyse propre et trois tests réussis : compatibilité des anciens contrats,
+promesse conservée et singulier du délai/quantité. Pas encore publié : la version
+du paquet reste 0.13.8 et les apps de travail utilisent un override local.
+Publier le paquet et remplacer les refs git des apps au Go de publication,
+puis vérifier les apps successivement avant d'activer la capacité serveur.
+
 ## Fait (septembre 2026)
 
 | Version | Commit | Contenu |
