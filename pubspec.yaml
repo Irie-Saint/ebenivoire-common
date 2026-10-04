@@ -1,6 +1,6 @@
 name: ebenivoire_common
 description: >-
-  Code Flutter commun aux apps EbenIvoire (cliente, vendeur, console) :
+  Code Flutter commun aux apps EbènIvoire (cliente, vendeur, console) :
   un seul exemplaire, pour que les trois copies ne divergent plus.
 version: 0.13.9
 publish_to: none

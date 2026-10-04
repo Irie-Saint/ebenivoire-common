@@ -16,7 +16,7 @@ import 'review_config.dart';
 ///
 /// Strategy (see the `app_review_config` platform setting): after a POSITIVE
 /// moment (order delivered, review published) we show a maison pre-prompt
-/// ("Do you like EbenIvoire?"). Happy users are routed to the native store
+/// ("Do you like EbènIvoire?"). Happy users are routed to the native store
 /// rating (protects the public rating); unhappy users go to a private feedback
 /// form. All gating state (session count, install date, cooldown, prompt count)
 /// lives locally in SharedPreferences; the thresholds come from the backend.

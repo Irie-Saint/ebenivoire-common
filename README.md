@@ -1,6 +1,6 @@
 # ebenivoire_common
 
-Le code Flutter commun aux trois apps EbenIvoire (cliente, vendeur, console),
+Le code Flutter commun aux trois apps EbènIvoire (cliente, vendeur, console),
 en un seul exemplaire. Avant ce paquet, chaque fichier existait en trois
 copies qu'il fallait penser à modifier ensemble.
 

@@ -1,4 +1,4 @@
-# EbenIvoire — paquet commun Flutter
+# EbènIvoire — paquet commun Flutter
 
 > **Avant d'écrire « fait »** : lancer
 > `python E:\PythonProjects\EbenIvoireBackend\scripts\verifier_livraison.py <ce dépôt>`
