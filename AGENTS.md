@@ -1,5 +1,12 @@
 # EbenIvoire — paquet commun Flutter
 
+> **Avant d'écrire « fait »** : lancer
+> `python E:\PythonProjects\EbenIvoireBackend\scripts\verifier_livraison.py <ce dépôt>`
+> et recopier son bloc « RÉSULTAT » tel quel. Écran touché : planche maquette/rendu
+> (`scripts\planche_comparaison.py`) OUVERTE, regardée et jointe au compte rendu.
+> Jamais `git commit --no-verify`. Règles complètes : `docs/REPRISE_IA.md` § 0
+> (dans le dépôt serveur).
+
 **Avant toute action, lis `E:\PythonProjects\EbenIvoireBackend\docs\REPRISE_IA.md`**
 (méthode, règles, mémoire, skills) et `docs/SUITE.md` (journal des versions).
 
